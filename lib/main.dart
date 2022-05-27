@@ -28,7 +28,16 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    loadModel();
+    loadModel().then((value) {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    //dis function disposes and clears our memory
+    super.dispose();
+    //PyTorchMobile.close();
   }
 
   //load your model
@@ -61,6 +70,7 @@ class _MyAppState extends State<MyApp> {
   }
 
   //run a custom model with number inputs
+  //カスタム予測を取得する
   Future runCustomModel() async {
     _prediction = await _customModel!
         .getPrediction([1, 2, 3, 4], [1, 2, 2], DType.float32);
