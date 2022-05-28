@@ -51,17 +51,55 @@ class Net2(nn.Module):
 
 
 
+#関数prepare_dataではLSTMに入力するデータを30日分ずつまとめる役割を果たしています。
+def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
+    feats = torch.zeros((len(batch_idx), time_steps, feature_num), dtype=torch.float, device=device)
+    for b_i, b_idx in enumerate(batch_idx):
+        # 過去の30日分をtime stepのデータとして格納する。
+        b_slc = slice(b_idx + 1 - time_steps ,b_idx + 1)
+        feats[b_i, :, :] = X_data[b_slc, :]
+
+    return feats
+
+
+
+#モデルの定義です。PytorchのライブラリからLSTMを引っ張ってきました。
+class LSTMClassifier(nn.Module):
+    def __init__(self, lstm_input_dim, lstm_hidden_dim, target_dim):
+        super(LSTMClassifier, self).__init__()
+        self.input_dim = lstm_input_dim
+        self.hidden_dim = lstm_hidden_dim
+        self.lstm = nn.LSTM(input_size=lstm_input_dim, 
+                            hidden_size=lstm_hidden_dim,
+                            num_layers=1, #default
+                            #dropout=0.2,
+                            batch_first=True
+                            )
+        self.dense = nn.Linear(lstm_hidden_dim, target_dim)
+
+    def forward(self, X_input):
+        _, lstm_out = self.lstm(X_input)
+        # LSTMの最終出力のみを利用する。
+        linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1))
+        return torch.sigmoid(linear_out)
+
+
+
+
+
+
+
 
 if __name__ == "__main__":
-    model = Net2("1")
+    model = LSTMClassifier()
     print(model)
-    model.eval()
-    print(model)
+    print(model.eval())
+
     example = torch.rand(1,2,2) #tensor of size input_shape
     print(example)
     traced_script_module = torch.jit.trace(model, example)
     #traced_script_module.save("example/assets/models/custom_model.pt")
-    traced_script_module.save("testmodels/custom_model.pt")
+    traced_script_module.save("testmodels/stackcard_model.pt")
 
 
     from torch.autograd import Variable
