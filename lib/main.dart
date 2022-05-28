@@ -78,6 +78,20 @@ class _MyAppState extends State<MyApp> {
     setState(() {});
   }
 
+  /*
+  ///predicts abstract number input
+  Future<List?> getPrediction(
+      List<double> input, List<int> shape, DType dtype) async {
+    final List? prediction = await _channel.invokeListMethod('predict', {
+      "index": _index,
+      "data": input,
+      "shape": shape,
+      "dtype": dtype.toString().split(".").last
+    });
+    return prediction;
+  }
+  */
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
