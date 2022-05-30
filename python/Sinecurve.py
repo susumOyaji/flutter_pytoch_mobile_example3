@@ -1,34 +1,10 @@
-
-#以下に、validationも書き加えたソースコードの全体を載せます。
-# 恐らくこれをそのままコピペすれば動くはずなので、ぜひ参考にしてください。
-
 import torch
 import torch.nn as nn
 from torch.optim import SGD
 import math
 import numpy as np
-import datetime
-from pandas_datareader import data
-import matplotlib.pyplot as plt
-import random
-import pandas as pd
-
-
-start = datetime.date(2021, 1, 1)
-end = datetime.date.today()
-code = '6758'  # SONY
-df = data.DataReader(f'{code}.T', 'yahoo', start, end)
-
-
-
-
-
-
-
 
 class Predictor(nn.Module):
-    # __init__ 内でモデルの持つ層を宣言します。 このモデルは2つの層を持っており、nn.LSTM と nn.Linear を持っている。
-    #  nn.LSTM は LSTM の層を、nn.Linear は全結合層を表す。
     def __init__(self, inputDim, hiddenDim, outputDim):
         super(Predictor, self).__init__()
 
@@ -43,9 +19,6 @@ class Predictor(nn.Module):
 
         return output
 
-
-
-
 def mkDataSet(data_size, data_length=50, freq=60., noise=0.00):
     """
     params\n
@@ -57,7 +30,7 @@ def mkDataSet(data_size, data_length=50, freq=60., noise=0.00):
     train_x : トレーニングデータ（t=1,2,...,size-1の値)\n
     train_t : トレーニングデータのラベル（t=sizeの値）\n
     """
-    train_x = []#トレーニングデータ（t=1,2,...,size-1の値)
+    train_x = []
     train_t = []
 
     for offset in range(data_size):
@@ -65,8 +38,6 @@ def mkDataSet(data_size, data_length=50, freq=60., noise=0.00):
         train_t.append([math.sin(2 * math.pi * (offset + data_length) / freq)])
 
     return train_x, train_t
-
-
 
 def mkRandomBatch(train_x, train_t, batch_size=10):
     """
@@ -90,26 +61,6 @@ def main():
     batch_size = 100
 
     train_x, train_t = mkDataSet(training_size)
-
-    '''
-    random.seed(0)
-    # 乱数の係数
-    random_factor = 0.05
-    # サイクルあたりのステップ数
-    steps_per_cycle = 80
-    # 生成するサイクル数
-    number_of_cycles = 50
-
-    df = pd.DataFrame(np.arange(steps_per_cycle * number_of_cycles + 1), columns=["t"])
-    print(df)
-    df["sin_t"] = df.t.apply(lambda x: math.sin(x * (2 * math.pi / steps_per_cycle)+ random.uniform(-1.0, +1.0) * random_factor))
-    print(df["sin_t"])
-    df[["sin_t"]].head(steps_per_cycle * 2).plot()
-    '''
-    a =np.arange(train_x,10000)
-    plt.plot(train_x,train_t)
-    plt.show()
-
     test_x, test_t = mkDataSet(test_size)
 
     model = Predictor(1, hidden_size, 1)
@@ -131,8 +82,7 @@ def main():
             loss.backward()
             optimizer.step()
 
-            #running_loss += loss.data[0]
-            running_loss += loss.data.item()
+            running_loss += loss.data[0]
             training_accuracy += np.sum(np.abs((output.data - label.data).numpy()) < 0.1)
 
         #test
