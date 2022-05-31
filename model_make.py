@@ -23,7 +23,7 @@ start_train = datetime.date.today() + relativedelta(days=-700)
 end_train = datetime.date.today() + relativedelta(days=-1)
 start_test = datetime.date.today()
 
-data = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)  # 教師データを読み込む。
+adjclosed = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)["Adj Close"] # 教師データを読み込む。
 Dow_df = pdr.get_data_yahoo('^DJI', start_train, end_train)  # 試験データのcsvファイルを読み込む。
 Nikkei_df = pdr.get_data_yahoo('^N225', start_train, end_train)  # 試験データのcsvファイルを読み込む。
 
@@ -170,7 +170,13 @@ class LSTMClassifier(nn.Module):
         return torch.sigmoid(linear_out)
 
 
-class Predictor(nn.Module):
+
+#「nn.Module」はこのclassがnn.Moduleというclassを継承していることを意味する.
+# なぜ継承するかというとnn.ModuleがNetworkを操作する上でパラメータ操作などの重要な機能を持つためである.
+#「def __init__(self)」は初期化関数の定義で,コンストラクタなどと呼ばれる.初めてclassを呼び出したときにこの中身のものが実行される.
+#「super(Predictor, self).__init__()」は継承したnn.Moduleの初期化関数を起動している.superの引数の「Predictor」はもちろん自身が定義したclassの名前である.
+#「def forward(self, x)」には実際の処理を書いていく.
+class Predictor(nn.Module):#「Predictor」はただの名前だから好きなもので良い.
     # __init__ 内でモデルの持つ層を宣言します。 このモデルは2つの層を持っており、nn.LSTM と nn.Linear を持っている。
     #  nn.LSTM は LSTM の層を、nn.Linear は全結合層を表す。
     def __init__(self, inputDim, hiddenDim, outputDim):
@@ -187,7 +193,8 @@ class Predictor(nn.Module):
 
         return output
 
-
+#「self.xxxxx」という変数はずっと保持される.
+# なので,convolutionやfully connectなどの学習に必要なパラメータを保持したいものなどをここに書いていく.
 
 
 
