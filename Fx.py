@@ -58,7 +58,7 @@ torch.manual_seed(1)
 #データを分割し、PyTorchで利用できるようにtorchのtensorに変換しておきます。
 
 # 1. CSVファイルの読み込み
-df = pd.read_csv('./data/USD_JPY_201601-201908_M10.csv', index_col='Datetime')
+df = pd.read_csv('USD_JPY_201601-201908_M10.csv', index_col='Datetime')
 
 # 2. 教師データの作成
 future_price = df.iloc[future_num:]['Close'].values
@@ -93,10 +93,8 @@ y_test  = y_data[test_idx_from:]
 #時系列データを処理するためのLSTMのクラスを定義します。
 #このクラスでは、（バッチ数、時系列データ数、特徴量数）のデータを受けて、LSTMを通し、LSTMの最終出力をLinear層に渡し、
 #Linear層の出力をsigmoidでバイナリの予測として出力する、というモデルにしています。
-
 #今回はLSTMで二値分類のため、LSTMの時系列の出力は利用せず、最終出力のみを利用します。
 #各データポイント毎に50個分の時系列データをLSTMに渡して、LSTMは50個分の時系列の結果を返しますが、途中の結果は利用せずに最終出力結果のみを利用します。
-
 
 class LSTMClassifier(nn.Module):
     def __init__(self, lstm_input_dim, lstm_hidden_dim, target_dim):
@@ -145,8 +143,11 @@ def prep_feature_data(batch_idx, time_steps, X_data, feature_num, device):
 #optmizerはAdamを利用します。
 
 # Prepare for training
+#feature_num = 5 #volume, open, high, low, closeの5項目
+#lstm_hidden_dim = 16
+#target_dim = 1
 model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
-loss_function = nn.BCELoss()
+loss_function = nn.BCELoss() #二値分類（上がるか下がるか）なので、素直にbinary classification entropy loss（BCELoss）を利用
 optimizer= optim.Adam(model.parameters(), lr=1e-4)
 
 
@@ -191,11 +192,11 @@ for epoch in range(n_epocs):
     # 6. validationの評価が良ければモデルを保存
     if acc_score > best_acc_score:
         best_acc_score = acc_score
-        torch.save(model.state_dict(),'./models/pytorch_v1.mdl')
+        torch.save(model.state_dict(),'assets/models/pytorch_v1.mdl')
         print('best score updated, Pytorch model was saved!!', )
 
 # 7. bestモデルで予測する。
-model.load_state_dict(torch.load('./models/pytorch_v1.mdl'))
+model.load_state_dict(torch.load('assets/models/pytorch_v1.mdl'))
 with torch.no_grad():
     feats_test = prep_feature_data(np.arange(time_steps, X_test.size(0)), time_steps, X_test, feature_num, device)
     val_scores = model(feats_test)
@@ -235,106 +236,3 @@ Val ACC Score : 0.48987468671679196  ROC AUC Score : 0.5201632287277098
 Test ACC Score : 0.4947853134910954  ROC AUC Score : 0.5020565230922682
 '''
 
-'''LSTMのモデルでバックテスト実施'''
-#LSTMのモデルを使ってバックテストを実施してみます。
-#準備として必要なパッケージのインポート、csvデータの読み込み等を行います。
-
-from backtesting import Strategy
-from backtesting import Backtest
-df = pd.read_csv('./data/USD_JPY_201601-201908_M10.csv', index_col='Datetime')
-df.index = pd.to_datetime(df.index)
-
-
-'''続いて、バックテストで利用するためのLSTMのStrategyクラスを定義します。'''
-#1. initではLSTMの学習済みモデルを読み込んでおきます。
-#2. PyTorchのLSTMに投入するためにデータを整えます。
-#3. LSTMのPyTorchのモデルで予測します。
-#4. 予測結果が1であれば買い、0であれば売りの指示を出します。今回はst(stop loss）、tp（take profit）も指定してみました。
-
-class myLSTMStrategy(Strategy):
-    def init(self):
-        # 1. LSTMの学習済みモデルの読み込み
-        self.model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
-        # load model
-        self.model.load_state_dict(torch.load('./models/pytorch_v1.mdl'))
-
-    def next(self): 
-        # 過去500ステップ分のデータが貯まるまではスキップ
-        # 1日に1回のみ取引するため、hour & minuteが0の時のみ処理するようにする。
-        if len(self.data) >= moving_average_num + time_steps and len(self.data) % future_num == 0:
-            # 2. 推測用データの用意
-            x_array = self.prepare_data()
-            x_tensor = torch.tensor(x_array, dtype=torch.float, device=device)
-            # 3. 予測の実行
-            with torch.no_grad():
-                y_pred = self.predict(x_tensor.view(1, time_steps, feature_num))
-
-            # 4. 予測が買い(1)であればbuy()、それ以外はsell()
-            if y_pred == 1:
-                self.buy(sl=self.data.Close[-1]*0.99, 
-                         tp=self.data.Close[-1]*1.01)
-            else:
-                self.sell(sl=self.data.Close[-1]*1.01, 
-                         tp=self.data.Close[-1]*0.99)
-
-    def prepare_data(self):
-        # いったんPandasのデータフレームに変換
-        tmp_df = pd.concat([
-                    self.data.Volume.to_series(), 
-                    self.data.Open.to_series(), 
-                    self.data.High.to_series(), 
-                    self.data.Low.to_series(), 
-                    self.data.Close.to_series(), 
-                    ], axis=1)
-
-        # 500足の移動平均に対する割合とする。
-        cols = tmp_df.columns
-        for col in cols:
-            tmp_df['Roll_' + col] = tmp_df[col].rolling(window=moving_average_num, min_periods=moving_average_num).mean()
-            tmp_df[col] = tmp_df[col] / tmp_df['Roll_' + col] - 1
-
-        #最後のtime_steps分のみの値を返す
-        return tmp_df.tail(time_steps)[cols].values
-
-    def predict(self, x_array):
-        y_score = self.model(x_array) 
-        return np.round(y_score.view(-1).to('cpu').numpy())[0]
-
-
-
-'''バックテストを実行します。'''
-
-bt = Backtest(df[100000:], myLSTMStrategy, cash=100000, commission=.00004)
-bt.run()
-
-'''
-実行結果はどうだったでしょうか。
-
-Start                     2018-09-06 13:10:00
-End                       2019-08-01 03:50:00
-Duration                    328 days 14:40:00
-Exposure [%]                          97.6289
-Equity Final [$]                       103012
-Equity Peak [$]                        104203
-Return [%]                            3.01237
-Buy & Hold Return [%]                 1.76702
-Max. Drawdown [%]                    -3.79017
-Avg. Drawdown [%]                   -0.179441
-Max. Drawdown Duration       77 days 13:50:00
-Avg. Drawdown Duration        1 days 13:34:00
-# Trades                                  228
-Win Rate [%]                          50.8772
-Best Trade [%]                       0.993839
-Worst Trade [%]                      -1.00702
-Avg. Trade [%]                        0.01088
-Max. Trade Duration           3 days 01:00:00
-Avg. Trade Duration           1 days 09:47:00
-Expectancy [%]                        0.25287
-SQN                                    0.4725
-Sharpe Ratio                        0.0330574
-Sortino Ratio                       0.0501238
-Calmar Ratio                       0.00287057
-_strategy                      myLSTMStrategy
-dtype: object
-228回の取引でReturnが3.01%、10万円が10万3,012円となっていました。
-'''
