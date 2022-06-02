@@ -107,3 +107,11 @@ for idx, item in enumerate(zip(outputs, y_train)):
         break
     print(item[0].data, '<--->', item[1])
 
+
+predict = (outputs + 0.5).int()
+for idx, item in enumerate(zip(predict, y_train)):
+    if idx == 5:
+        break
+    print('output:', item[0], ', label:', item[1])
+
+#浮動小数点数値の計算結果を整数値に変換するコード
