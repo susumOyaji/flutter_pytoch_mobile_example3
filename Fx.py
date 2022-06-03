@@ -16,18 +16,37 @@ val_idx_from、test_idx_fromはそれぞれデータの何行目以降を評価�
 lstm_hidden_dim, target_dimはLSTMの隠れ層の出力サイズと最終出力サイズです。
 '''
 
-future_num = 144 #何足先を予測するか
-feature_num = 5 #volume, open, high, low, closeの5項目
+future_num = 144 
+#価格が上がるか下がるかを予測する未来の10分足数です。
+#ここでは10分足データの144足分のため、1日先の価格が上がるか下がるか、の予測となります。
+
+feature_num = 6 
+#入力データの特徴量の数で、ボリューム、Open, High, Low, Closeの5項目を利用します。
+
 batch_size = 128
-time_steps = 50 # lstmのtimesteps
-moving_average_num = 500 # 移動平均を取るCandle数
+#LSTMが予測で利用する過去のデータポイントの数です。
+
+time_steps = 50 
+#LSTMが予測で利用する過去のデータポイントの数です。
+# 今回は過去の50個分のデータを見て、144個先のClose値が現在に比べて上がるのか下がるのかを予測するモデルとしています。
+
+moving_average_num = 500 
+#500と指定しています。
+# これは、LSTMに投入するデータは過去500足分の移動平均に対する現在の値の比率とするためです。
+
 n_epocs = 30 
-#データをtrain, testに分割するIndex
+#LSTMのトレーニングで何epoch数分実施するかです。
+
 val_idx_from = 80000
 test_idx_from = 100000
+#それぞれデータの何行目以降を評価用、テスト用として分割するかの位置です。
 
 lstm_hidden_dim = 16
 target_dim = 1
+#LSTMの隠れ層の出力サイズと最終出力サイズです。
+
+
+
 
 '''
 LSTMのモデルに必要なパッケージをインポートしておきます。
@@ -48,7 +67,15 @@ import gc
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(1)
+#deviceはGPUの利用可否に応じでcudaまたはcpuがセットされます。
 
+
+
+import datetime
+start = datetime.date(2018, 1, 1)
+end = datetime.date.today()
+code = '6758'  # SONY
+stock = []
 '''データ準備'''
 #LSTMで学習できるようにデータを準備していきます。
 #Oanda APIで取得したCSVデータを読み込みます。
@@ -59,6 +86,15 @@ torch.manual_seed(1)
 
 # 1. CSVファイルの読み込み
 df = pd.read_csv('USD_JPY_201601-201908_M10.csv', index_col='Datetime')
+
+from pandas_datareader import data as pdr
+#df = pdr.get_data_yahoo(f'{code}.T',  start, end )  # 株価データの取得
+print(df)
+
+
+
+
+
 
 # 2. 教師データの作成
 future_price = df.iloc[future_num:]['Close'].values
@@ -108,12 +144,38 @@ class LSTMClassifier(nn.Module):
                             batch_first=True
                             )
         self.dense = nn.Linear(lstm_hidden_dim, target_dim)
-
+    #_init__メソッドで定義した層が実際にどのようにつながっているか（ニューラルネットワークがどのように計算を連ねていくか）はforwardメソッドで定めています。
+    # forwardメソッドは入力x（あやめの特徴を示す4つのデータ）を受け取り、それをself.lstmで処理して、
+    # その結果をにtorch.sigmoid関数に通した結果を今度はself.fc2メソッドで処理し、その結果を戻り値（ニューラルネットワークの計算結果）としています
+    # （ここで「self.fc1とself.fc2はLinearクラスのインスタンスなのに、メソッドのように呼び出している」ことに気付くかもしれません。
+    # が、PyTorchではこのような書き方ができるようになっています。
     def forward(self, X_input):
-        _, lstm_out = self.lstm(X_input)
+        _, lstm_out = self.lstm(X_input)# _, Return値を無視
+        print(X_input)
         # LSTMの最終出力のみを利用する。
         linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1))
         return torch.sigmoid(linear_out)
+    #0 要素のテンソルを形状 [0, -1] に再形成できないのは、指定されていない寸法サイズ -1 は任意の値にすることができ、あいまいであるためです
+
+class LSTM(nn.Module):
+    def __init__(self, input_size, hidden_layer_size, output_size):
+        super(LSTM, self).__init__()
+        self.hidden_layer_size = hidden_layer_size
+
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_layer_size, batch_first=True)
+
+        self.linear = nn.Linear(in_features=hidden_layer_size, out_features=output_size)
+
+    def forward(self, x):
+        # LSTMのinputは(batch_size, seq_len, input_size)にする
+        # LSTMのoutputは(batch_size, seq_len, hidden_layer_size)となる
+        # hidden stateとcell stateにはNoneを渡して0ベクトルを渡す
+        lstm_out, (hn, cn) = self.lstm(x, None)
+        # Linearのinputは(N,∗,in_features)にする
+        # lstm_out(batch_size, seq_len, hidden_layer_size)のseq_len方向の最後の値をLinearに入力する
+        prediction = self.linear(lstm_out[:, -1, :])
+        return prediction
+
 
 #次に一つヘルパーファンクションを定義しておきます。
 #このファンクションは重要で、データポイントのindexのバッチ数分の配列を受けたら、
@@ -147,6 +209,7 @@ def prep_feature_data(batch_idx, time_steps, X_data, feature_num, device):
 #lstm_hidden_dim = 16
 #target_dim = 1
 model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
+#model = LSTM(feature_num, lstm_hidden_dim, target_dim).to(device)
 loss_function = nn.BCELoss() #二値分類（上がるか下がるか）なので、素直にbinary classification entropy loss（BCELoss）を利用
 optimizer= optim.Adam(model.parameters(), lr=1e-4)
 

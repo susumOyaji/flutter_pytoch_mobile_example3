@@ -117,8 +117,8 @@ X_train, y_train = make_train_data(num_div, cycles, num_batch)
 
 input_size = 1 #一度に1個のデータを入力していくので、input_sizeは1です。
 hidden_size = 32 #（このサイズに合わせて、この後の隠れ状態の初期化を行います）。
-#net = Net(input_size, hidden_size)
-net = Predictor(input_size,hidden_size,1)
+net = Net(input_size, hidden_size)
+#net = Predictor(input_size,hidden_size,1)
 #Netクラスのインスタンス生成、損失関数と最適化アルゴリズムの選択
 criterion = torch.nn.MSELoss()
 optimizer = torch.optim.SGD(net.parameters(), lr=0.05)
