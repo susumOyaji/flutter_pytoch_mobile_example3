@@ -20,7 +20,7 @@ future_num = 144
 #価格が上がるか下がるかを予測する未来の10分足数です。
 #ここでは10分足データの144足分のため、1日先の価格が上がるか下がるか、の予測となります。
 
-feature_num = 6 
+feature_num = 5 
 #入力データの特徴量の数で、ボリューム、Open, High, Low, Closeの5項目を利用します。
 
 batch_size = 128
@@ -34,7 +34,7 @@ moving_average_num = 500
 #500と指定しています。
 # これは、LSTMに投入するデータは過去500足分の移動平均に対する現在の値の比率とするためです。
 
-n_epocs = 30 
+n_epocs = 5#30 
 #LSTMのトレーニングで何epoch数分実施するかです。
 
 val_idx_from = 80000
@@ -79,12 +79,8 @@ stock = []
 '''データ準備'''
 #LSTMで学習できるようにデータを準備していきます。
 #Oanda APIで取得したCSVデータを読み込みます。
-#教師データとして、144足先のClose値と現在のClose値を比較し、上がって入れば1、下がっていれば0をセットします。
-#数量や価格はそのまま利用するのではなく、直近500足データの移動平均に対する率とします。
-#約3.5日分の移動平均に対して何%上下しているかを予測のためのインプットとします。
-#データを分割し、PyTorchで利用できるようにtorchのtensorに変換しておきます。
 
-# 1. CSVファイルの読み込み
+''' 1. CSVファイルの読み込み '''
 df = pd.read_csv('USD_JPY_201601-201908_M10.csv', index_col='Datetime')
 
 from pandas_datareader import data as pdr
@@ -96,14 +92,19 @@ print(df)
 
 
 
-# 2. 教師データの作成
-future_price = df.iloc[future_num:]['Close'].values
-curr_price = df.iloc[:-future_num]['Close'].values
+''' 2. 教師データの作成 '''
+#教師データとして、144足先のClose値と現在のClose値を比較し、上がって入れば1、下がっていれば0をセットします。
+#数量や価格はそのまま利用するのではなく、直近500足データの移動平均に対する率とします。
+#約3.5日分の移動平均に対して何%上下しているかを予測のためのインプットとします。
+#データを分割し、PyTorchで利用できるようにtorchのtensorに変換しておきます。
+future_price = df.iloc[future_num:]['Close'].values # 144足先のClose値
+curr_price = df.iloc[:-future_num]['Close'].values # 現在のClose値
 y_data_tmp = future_price - curr_price
-y_data = np.zeros_like(y_data_tmp)
+y_data = np.zeros_like(y_data_tmp)#元の配列と同じ形状の配列を生成する
 y_data[y_data_tmp > 0] = 1
 y_data = y_data[moving_average_num:]
-# 3. 価格の正規化
+
+''' 3. 価格の正規化 '''
 cols = df.columns
 for col in cols:
     df['Roll_' + col] = df[col].rolling(window=500, min_periods=500).mean()
@@ -112,7 +113,7 @@ for col in cols:
 #最初の500足分は移動平均データがないため除く。後半の144足分は予測データがないため除く
 X_data = df.iloc[moving_average_num:-future_num][cols].values
 
-# 4. データの分割、TorchのTensorに変換
+''' 4. データの分割、TorchのTensorに変換 '''
 #学習用データ
 X_train = torch.tensor(X_data[:val_idx_from], dtype=torch.float, device=device)
 y_train = torch.tensor(y_data[:val_idx_from], dtype=torch.float, device=device)
@@ -151,7 +152,7 @@ class LSTMClassifier(nn.Module):
     # が、PyTorchではこのような書き方ができるようになっています。
     def forward(self, X_input):
         _, lstm_out = self.lstm(X_input)# _, Return値を無視
-        print(X_input)
+        #print(X_input)
         # LSTMの最終出力のみを利用する。
         linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1))
         return torch.sigmoid(linear_out)
@@ -236,7 +237,7 @@ for epoch in range(n_epocs):
         y_target = y_train[batch_idx]
         # 4. pytorch LSTMの学習実施
         model.zero_grad()
-        train_scores = model(feats) # batch size x time steps x feature_num
+        train_scores = model(feats) # batch size x time steps x feature_num （バッチ数、時系列データ数、特徴量数）
         loss = loss_function(train_scores, y_target.view(-1, 1))
         loss.backward()
         optimizer.step()
