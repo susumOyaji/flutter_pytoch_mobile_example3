@@ -16,17 +16,17 @@ val_idx_from、test_idx_fromはそれぞれデータの何行目以降を評価�
 lstm_hidden_dim, target_dimはLSTMの隠れ層の出力サイズと最終出力サイズです。
 '''
 
-future_num = 144 
+future_num = 1#144 
 #価格が上がるか下がるかを予測する未来の10分足数です。
 #ここでは10分足データの144足分のため、1日先の価格が上がるか下がるか、の予測となります。
 
-feature_num = 5 
-#入力データの特徴量の数で、ボリューム、Open, High, Low, Closeの5項目を利用します。
+feature_num = 6 
+#入力データの特徴量の数で、Volume、Open, High, Low, Close, Adj Closeの6項目を利用します。
 
 batch_size = 128
 #LSTMが予測で利用する過去のデータポイントの数です。
 
-time_steps = 50 
+time_steps = 30#50 
 #LSTMが予測で利用する過去のデータポイントの数です。
 # 今回は過去の50個分のデータを見て、144個先のClose値が現在に比べて上がるのか下がるのかを予測するモデルとしています。
 
@@ -37,8 +37,8 @@ moving_average_num = 500
 n_epocs = 5#30 
 #LSTMのトレーニングで何epoch数分実施するかです。
 
-val_idx_from = 80000
-test_idx_from = 100000
+val_idx_from = 800#80000  # 評価用
+test_idx_from = 1000#100000  # テスト用
 #それぞれデータの何行目以降を評価用、テスト用として分割するかの位置です。
 
 lstm_hidden_dim = 16
@@ -72,7 +72,7 @@ torch.manual_seed(1)
 
 
 import datetime
-start = datetime.date(2018, 1, 1)
+start = datetime.date(2016, 1, 1)
 end = datetime.date.today()
 code = '6758'  # SONY
 stock = []
@@ -150,6 +150,7 @@ class LSTMClassifier(nn.Module):
     # その結果をにtorch.sigmoid関数に通した結果を今度はself.fc2メソッドで処理し、その結果を戻り値（ニューラルネットワークの計算結果）としています
     # （ここで「self.fc1とself.fc2はLinearクラスのインスタンスなのに、メソッドのように呼び出している」ことに気付くかもしれません。
     # が、PyTorchではこのような書き方ができるようになっています。
+    # forwardはデータxをtensor型で受け取る
     def forward(self, X_input):
         _, lstm_out = self.lstm(X_input)# _, Return値を無視
         #print(X_input)
@@ -158,9 +159,12 @@ class LSTMClassifier(nn.Module):
         return torch.sigmoid(linear_out)
     #0 要素のテンソルを形状 [0, -1] に再形成できないのは、指定されていない寸法サイズ -1 は任意の値にすることができ、あいまいであるためです
 
+
+
 class LSTM(nn.Module):
     def __init__(self, input_size, hidden_layer_size, output_size):
         super(LSTM, self).__init__()
+        self.input_size = input_size
         self.hidden_layer_size = hidden_layer_size
 
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_layer_size, batch_first=True)
@@ -168,6 +172,7 @@ class LSTM(nn.Module):
         self.linear = nn.Linear(in_features=hidden_layer_size, out_features=output_size)
 
     def forward(self, x):
+        #forwardはデータxをtensor型で受け取る
         # LSTMのinputは(batch_size, seq_len, input_size)にする
         # LSTMのoutputは(batch_size, seq_len, hidden_layer_size)となる
         # hidden stateとcell stateにはNoneを渡して0ベクトルを渡す
@@ -178,15 +183,21 @@ class LSTM(nn.Module):
         return prediction
 
 
+
+
+
+
+
+
 #次に一つヘルパーファンクションを定義しておきます。
 #このファンクションは重要で、データポイントのindexのバッチ数分の配列を受けたら、
 #その各index毎に過去50個分の過去データを2つめの次元に追加してそれを一つの固まりとしてLSTMに投入できるようにします。
 
-#バッチ毎の処理数が128、特徴量の数(ボリューム、Open, High, Low, Close）が5のため、
-#このファンクションの入力データ（X_data）の次元は（128, 5)となります。
+#バッチ毎の処理数が128、特徴量の数(ボリューム、Open, High, Low, Close, Adj Close）が6のため、
+#このファンクションの入力データ（X_data）の次元は（128, 6)となります。
 
 #この各データポイントに対して、過去50個分（time_steps数）のデータを合成してfeatsとして返します。
-#そのため、戻り値の次元は(128, 50, 5）となります。2次元目に合成されたデータが過去50個分の時系列データとなります。
+#そのため、戻り値の次元は(128, 50, 6）となります。2次元目に合成されたデータが過去50個分の時系列データとなります。
 
 def prep_feature_data(batch_idx, time_steps, X_data, feature_num, device):
     feats = torch.zeros((len(batch_idx), time_steps, feature_num), dtype=torch.float, device=device)
@@ -198,6 +209,14 @@ def prep_feature_data(batch_idx, time_steps, X_data, feature_num, device):
     return feats
 
 
+def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
+    feats = torch.zeros((len(batch_idx), time_steps, feature_num), dtype=torch.float, device=device)
+    for b_i, b_idx in enumerate(batch_idx):
+        # 過去の30日分をtime stepのデータとして格納する。
+        b_slc = slice(b_idx + 1 - time_steps, b_idx + 1)
+        feats[b_i, :, :] = X_data[b_slc, :]
+
+    return feats
 
 '''LSTM学習の実施'''
 #ここまで準備が整ったら、実際に学習を実施してみましょう。
@@ -232,12 +251,15 @@ for epoch in range(n_epocs):
     # 2. batch size毎にperm_idxの対象のindexを取得
     for t_i in range(0, len(perm_idx), batch_size):
         batch_idx = perm_idx[t_i:(t_i + batch_size)]
+        
         # 3. LSTM入力用の時系列データの準備
         feats = prep_feature_data(batch_idx, time_steps, X_train, feature_num, device)
+        
         y_target = y_train[batch_idx]
         # 4. pytorch LSTMの学習実施
         model.zero_grad()
         train_scores = model(feats) # batch size x time steps x feature_num （バッチ数、時系列データ数、特徴量数）
+        print(train_scores)
         loss = loss_function(train_scores, y_target.view(-1, 1))
         loss.backward()
         optimizer.step()
