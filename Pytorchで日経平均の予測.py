@@ -15,20 +15,30 @@ test用でのaccuracyが62.5%を記録しました。しかしながら、loss�
 
 #定数の定義
 #main.py
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+import torch.nn.functional as F
+import torch.optim as optim
+import datetime
+from pandas_datareader import data as pdr
 import glob
 import pandas as pd
 import numpy as np
 import torch
 import torch.nn as nn
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
-import torch.nn.functional as F
-import torch.optim as optim
+
+
+start = datetime.date(2016, 1, 1)
+end = datetime.date.today()
+code = '6758'  # SONY
+
+
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(1)
 
 future_num = 1 #何日先を予測するか
-feature_num = 7 #'始値', '高値','安値','終値','5日平均','25日平均','75日平均'の7項目
+feature_num = 6#7 #'始値', '高値','安値','終値','5日平均','25日平均','75日平均'の7項目
 batch_size = 128
 
 time_steps = 30 #lstmのtimesteps
@@ -43,23 +53,60 @@ target_dim = 1
 #データの集め方はSBI公式サイト：よくあるご質問Q&Aに乗っていました。ここで指標を選択して日経平均のデータを20年分ダウンロードしました。
 
 #main.py
-path = "./data/nikkei_heikin.csv"
-
-model_name = "./models/nikkei.mdl"
+#path = "./data/nikkei_heikin.csv"
+path = "USD_JPY_201601-201908_M10.csv"
+model_name = "assets/models/pytorch_v1.mdl"#"./models/nikkei.mdl"
 
 #data load
-flist = glob.glob(path)
-for file in flist:
-    df = pd.read_csv(file, header=0, encoding='cp932')
-    dt = pd.read_csv(file, header=0, encoding='cp932')
+#flist = glob.glob(path)
+#or file in flist:
 
+#df = pd.read_csv(path, header=0, encoding='cp932')
+'''
+Datetime  Volume     Open     High      Low    Close
+0       2016-01-03 22: 00: 00     162  120.195  120.235  120.194  120.227
+1       2016-01-03 22: 10: 00     208  120.226  120.253  120.209  120.236
+2       2016-01-03 22: 20: 00     333  120.235  120.283  120.233  120.274
+3       2016-01-03 22: 30: 00     359  120.274  120.304  120.268  120.286
+4       2016-01-03 22: 40: 00     242  120.288  120.330  120.277  120.313
+...                     ...     ...      ...      ...      ...      ...
+133481  2019-08-01 03: 10: 00      62  109.152  109.187  109.152  109.182
+133482  2019-08-01 03: 20: 00      70  109.180  109.212  109.172  109.204
+133483  2019-08-01 03: 30: 00      52  109.207  109.210  109.185  109.195
+133484  2019-08-01 03: 40: 00      73  109.197  109.232  109.192  109.216
+133485  2019-08-01 03: 50: 00      71  109.218  109.252  109.218  109.239
 
+[133486 rows x 6 columns]
+'''
+
+    #dt = pd.read_csv(file, header=0, encoding='cp932')
+
+df = pdr.get_data_yahoo(f'{code}.T',  start, end )  # 株価データの取得
+'''
+High      Low     Open    Close      Volume     Adj Close
+Date
+2016-01-04   3066.0   2940.0   2958.0   2957.0  14332100.0   2843.607910
+2016-01-05   2999.0   2930.0   2980.0   2962.5   8021400.0   2848.896973
+2016-01-06   3014.0   2862.0   3013.0   2897.5  13992200.0   2786.389404
+2016-01-07   2834.0   2751.0   2797.5   2796.5  20924500.0   2689.262695
+2016-01-08   2895.0   2745.5   2755.0   2824.5  13972900.0   2716.188721
+...             ...      ...      ...      ...         ...           ...
+2022-05-30  12025.0  11660.0  11700.0  11995.0   8379800.0  11995.000000
+2022-05-31  12180.0  11955.0  12145.0  12115.0   5440100.0  12115.000000
+2022-06-01  12420.0  12085.0  12110.0  12370.0   4416500.0  12370.000000
+2022-06-02  12205.0  11975.0  12130.0  11975.0   3888200.0  11975.000000
+2022-06-03  12235.0  12080.0  12195.0  12200.0   3214800.0  12200.000000
+
+[1588 rows x 6 columns]
+'''
+
+print(df)
 #データをtrain, testに分割するIndex
 val_idx_from = 3500
 test_idx_from = 4000
 
-future_price = df.iloc[future_num:]['終値'].values
-curr_price = df.iloc[:-future_num]['終値'].values
+future_price = df.iloc[future_num:]['Close'].values
+curr_price = df.iloc[:-future_num]['Close'].values
 
 #future_num日後との比較した価格を正解ラベルとして扱う
 y_data_tmp = future_price / curr_price
@@ -77,12 +124,12 @@ y_data = y_data[moving_average_num:]
 
 #価格の正規化
 #カラム名の取得
-cols = ['始値', '高値','安値','終値','5日平均','25日平均','75日平均']
-#出来高のデータに缺損があったため抜いた
+cols = ['High','Low','Open','Close','Volume','Adj Close']
 
+#出来高のデータに缺損があったため抜いた
 for col in cols:
-    dt[col] = df[col].rolling(window=25, min_periods=25).mean()
-    df[col] = df[col] / dt[col] - 1
+    df[col] = df[col].rolling(window=25, min_periods=25).mean()
+    df[col] = df[col] / df[col] - 1
 
 
 X_data = df.iloc[moving_average_num:-future_num][cols].values
