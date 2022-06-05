@@ -27,15 +27,18 @@ import torch
 import torch.nn as nn
 
 
-start = datetime.date(2016, 1, 1)
-end = datetime.date.today()
-code = '6758'  # SONY
+s
 
 
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 torch.manual_seed(1)
+
+
+start = datetime.date(2016, 1, 1)
+end = datetime.date.today()
+code = '6758'  # SONY
 
 future_num = 1 #何日先を予測するか
 feature_num = 6#7 #'始値', '高値','安値','終値','5日平均','25日平均','75日平均'の7項目
