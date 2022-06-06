@@ -27,7 +27,7 @@ import torch
 import torch.nn as nn
 
 
-s
+
 
 
 
@@ -150,6 +150,12 @@ y_test  = y_data[test_idx_from:]
 #元のデータ数は約4500ありました。トレーニングデータ数を3500、バリデーションを500残りをテストデータとします。
 
 '''モデル定義'''
+'''
+まず、__init__の中で層を宣言しています。
+Pytorch では基本的に __init__ 内でモデルの持つ層を宣言します。
+このモデルは2つの層を持っており、nn.LSTM と nn.Linear を持っていますね。
+nn.LSTM は LSTM の層を、nn.Linear は全結合層を表します。
+'''
 #main.py
 class LSTMClassifier(nn.Module):
     def __init__(self, lstm_input_dim, lstm_hidden_dim, target_dim):
@@ -167,9 +173,52 @@ class LSTMClassifier(nn.Module):
     def forward(self, X_input):
         _, lstm_out = self.lstm(X_input)
         # LSTMの最終出力のみを利用する。
-        linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1))
+        # lstm_out[0]は３次元テンソルになってしまっているので2次元に調整して全結合。
+        #linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1)) #全結合層
+        linear_out = self.dense(lstm_out[: , -1 ,: ])
+        print(linear_out)
         return torch.sigmoid(linear_out)
 #モデルの定義です。PytorchのライブラリからLSTMを引っ張ってきました。
+'''
+そのうち欲しいのは、lstm_out の一番最後の値だけなので、output[:, -1, :] で時系列の最後の値（ここではベクトル）を取り出します。
+これを Linear(self.output_layer) にぶち込むことで、サイズ1のベクトル（要するに [0.123] みたいなやつ）を得ます。
+'''
+
+
+
+
+
+
+
+
+class LSTM(nn.Module):
+    def __init__(self, input_size, hidden_layer_size, batch_size):
+        super().__init__()
+        self.hidden_layer_size = hidden_layer_size
+        self.batch_size = batch_size
+        self.lstm = nn.LSTM(input_size, hidden_layer_size)
+
+        self.linear = nn.Linear(hidden_layer_size, batch_size)
+
+        #self.hidden_cell = (torch.zeros(1, self.batch_size, self.hidden_layer_size),
+        #                    torch.zeros(1, self.batch_size, self.hidden_layer_size))
+
+    def forward(self, input_seq):
+        batch_size, seq_len = input_seq.shape[0], input_seq.shape[1]
+        lstm_out = self.lstm(input_seq.view(seq_len, batch_size, 1)) #lstmのデフォルトの入力サイズは(シーケンスサイズ、バッチサイズ、特徴量次元数)
+        predictions = self.linear(self.hidden_cell[0].view(batch_size, -1))
+        return torch.sigmoid(lstm_out)
+        #return predictions[:, 0]
+
+
+
+
+
+
+
+
+
+
 
 #main.py
 def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
@@ -186,6 +235,7 @@ def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
 #main.py
 #学習
 model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
+#model = LSTM(feature_num, lstm_hidden_dim, target_dim).to(device)
 loss_function = nn.BCELoss()
 optimizer= optim.Adam(model.parameters(), lr=1e-4)
 
