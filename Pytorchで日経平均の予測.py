@@ -41,12 +41,14 @@ end = datetime.date.today()
 code = '6758'  # SONY
 
 future_num = 1 #何日先を予測するか
-feature_num = 6#7 #'始値', '高値','安値','終値','5日平均','25日平均','75日平均'の7項目
-batch_size = 128
+feature_num = 6 #5#'始値', '高値','安値','終値','5日平均','25日平均','75日平均'の7項目
+batch_size = 128 #LSTMの学習時に一度に投入するデータポイント数です。
 
-time_steps = 30 #lstmのtimesteps
+#LSTMが予測で利用する過去のデータポイントの数です。
+#今回は過去の50個分のデータを見て、144個先のClose値が現在に比べて上がるのか下がるのかを予測するモデルとしています。
+time_steps = 60#30 #lstmのtimesteps
 moving_average_num = 30 #移動平均を取る日数
-n_epocs = 50
+n_epocs = 10
 
 lstm_hidden_dim = 16
 target_dim = 1
@@ -105,8 +107,8 @@ Date
 
 print(df)
 #データをtrain, testに分割するIndex
-val_idx_from = 3500
-test_idx_from = 4000
+#val_idx_from = 3500
+#test_idx_from = 4000
 
 future_price = df.iloc[future_num:]['Close'].values
 curr_price = df.iloc[:-future_num]['Close'].values
@@ -128,25 +130,37 @@ y_data = y_data[moving_average_num:]
 #価格の正規化
 #カラム名の取得
 cols = ['High','Low','Open','Close','Volume','Adj Close']
+#cols = ['High','Low','Open','Close','Volume']
 
 #出来高のデータに缺損があったため抜いた
 for col in cols:
     df[col] = df[col].rolling(window=25, min_periods=25).mean()
-    df[col] = df[col] / df[col] - 1
+    #df[col] = df[col] / df[col] - 1
 
 
 X_data = df.iloc[moving_average_num:-future_num][cols].values
+print(X_data)
+#データをtrain, testに分割するIndex
+val_idx_from = int(len(X_data) * 0.8) # 全データのうち、80% のサイズを取得
+test_idx_from = 4000
+
+
+
 
 #データの分割、TorchのTensorに変換
 #学習用データ
 X_train = torch.tensor(X_data[:val_idx_from], dtype=torch.float, device=device)
 y_train = torch.tensor(y_data[:val_idx_from], dtype=torch.float, device=device)
+print(X_data,y_train)
 #評価用データ
-X_val   = torch.tensor(X_data[val_idx_from:test_idx_from], dtype=torch.float, device=device)
-y_val   = y_data[val_idx_from:test_idx_from]
+X_val   = torch.tensor(X_data[val_idx_from:], dtype=torch.float, device=device)
+y_val   = y_data[val_idx_from:]
+
+
+
 #テスト用データ
-X_test  = torch.tensor(X_data[test_idx_from:], dtype=torch.float, device=device)
-y_test  = y_data[test_idx_from:]
+X_test  = torch.tensor(X_data[val_idx_from:], dtype=torch.float, device=device)
+y_test  = y_data[val_idx_from:]
 #元のデータ数は約4500ありました。トレーニングデータ数を3500、バリデーションを500残りをテストデータとします。
 
 '''モデル定義'''
@@ -174,9 +188,9 @@ class LSTMClassifier(nn.Module):
         _, lstm_out = self.lstm(X_input)
         # LSTMの最終出力のみを利用する。
         # lstm_out[0]は３次元テンソルになってしまっているので2次元に調整して全結合。
-        #linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1)) #全結合層
-        linear_out = self.dense(lstm_out[: , -1 ,: ])
-        print(linear_out)
+        linear_out = self.dense(lstm_out[0].view(X_input.size(0), -1)) #全結合層
+        #linear_out = self.dense(lstm_out[: , -1 ,: ])
+        #print(linear_out)
         return torch.sigmoid(linear_out)
 #モデルの定義です。PytorchのライブラリからLSTMを引っ張ってきました。
 '''
@@ -234,10 +248,25 @@ def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
 '''学習と評価'''
 #main.py
 #学習
+
+'''
+LSTM学習の実施
+
+ここまで準備が整ったら、実際に学習を実施してみましょう。
+LSTMのインスタンスを生成し、損失関数と最適化関数を設定します。
+loss functionは二値分類（上がるか下がるか）なので、素直にbinary classification entropy loss（BCELoss）を利用、
+optmizerはAdamを利用します。
+'''
 model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
 #model = LSTM(feature_num, lstm_hidden_dim, target_dim).to(device)
 loss_function = nn.BCELoss()
 optimizer= optim.Adam(model.parameters(), lr=1e-4)
+
+
+
+'''
+
+'''
 
 
 train_size = X_train.size(0)
@@ -262,6 +291,7 @@ for epoch in range(n_epocs):
     with torch.no_grad():
         feats_val = prepare_data(np.arange(time_steps, X_val.size(0)), time_steps, X_val, feature_num, device)
         val_scores = model(feats_val)
+        print(val_scores)
         tmp_scores = val_scores.view(-1).to('cpu').numpy()
         bi_scores = np.round(tmp_scores)
         acc_score = accuracy_score(y_val[time_steps:], bi_scores)
@@ -275,7 +305,7 @@ for epoch in range(n_epocs):
         torch.save(model.state_dict(),model_name)
         print('best score updated, Pytorch model was saved!!', )
 
-# bestモデルで予測する。
+''' bestモデルで予測する。'''
 model.load_state_dict(torch.load(model_name))
 
 with torch.no_grad():
