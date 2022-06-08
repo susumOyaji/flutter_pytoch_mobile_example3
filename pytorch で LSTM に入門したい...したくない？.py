@@ -32,8 +32,8 @@ class Predictor(nn.Module):
                             )
         self.output_layer = nn.Linear(hiddenDim, outputDim)
     
-    def forward(self, inputs, hidden0=None):
-        output = self.rnn(inputs, hidden0)
+    def forward(self, inputs,hidden0=None):
+        output, (hidden, cell) = self.rnn(inputs, hidden0)
         #print(output)
         #インデックスは 0 から開始
         #負のインデックスは後ろ側から逆順に数える
@@ -108,13 +108,15 @@ def main():
     train_x, train_t = mkDataSet(training_size)
     test_x, test_t = mkDataSet(test_size)
 
-    test_x, test_t = stockDataSet(code)
+    #test_x, test_t = stockDataSet(code)
 
-
-    feature_num = 6 #5'High','Low','Open','Close','Volume','Adj Close'
-    model = Predictor(feature_num, hidden_size, 1)
+    model = Predictor(1, hidden_size, 1)
     criterion = nn.MSELoss()
     optimizer = SGD(model.parameters(), lr=0.01)
+
+
+
+
 
     for epoch in range(epochs_num):
         # training
