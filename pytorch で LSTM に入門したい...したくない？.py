@@ -4,17 +4,36 @@ from torch.optim import SGD
 import math
 import numpy as np
 
+
+
+
+
+
+
+from pandas_datareader import data as pdr
+from dateutil.relativedelta import relativedelta
+import datetime
+code = '6976'#'6758'
+#2021年から今日までの1年間のデータを取得しましょう。期日を決めて行きます。
+# (2021, 1, 1)  # 教師データ(今までのデータ)
+start_train = datetime.date.today() + relativedelta(days=-700)
+# 昨日分(today-1日)まで取得できる（当日分は変動しているため）
+end_train = datetime.date.today() + relativedelta(days=-1)
+
+
 class Predictor(nn.Module):
     def __init__(self, inputDim, hiddenDim, outputDim):
         super(Predictor, self).__init__()
-
+        self.input_dim = inputDim
+        self.hidden_dim = hiddenDim
         self.rnn = nn.LSTM(input_size = inputDim,
                             hidden_size = hiddenDim,
-                            batch_first = True)
+                            batch_first = True
+                            )
         self.output_layer = nn.Linear(hiddenDim, outputDim)
     
     def forward(self, inputs, hidden0=None):
-        output, (hidden, cell) = self.rnn(inputs, hidden0)
+        output = self.rnn(inputs, hidden0)
         #print(output)
         #インデックスは 0 から開始
         #負のインデックスは後ろ側から逆順に数える
@@ -44,6 +63,25 @@ def mkDataSet(data_size, data_length=50, freq=60., noise=0.00):
 
     return train_x, train_t
 
+
+def stockDataSet(code):
+    train_x = []
+    train_t = []
+    future_num = 1 #何日先を予測するか
+
+    df = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)  # 教師データを読み込む。
+    #カラム名の取得
+    cols = ['High','Low','Open','Close','Volume','Adj Close']
+    X_data = df.iloc[:-future_num][cols].values
+    print(df,X_data)
+
+    
+
+    return train_x, train_t
+
+
+
+
 def mkRandomBatch(train_x, train_t, batch_size=10):
     """
     train_x, train_tを受け取ってbatch_x, batch_tを返す。
@@ -58,17 +96,23 @@ def mkRandomBatch(train_x, train_t, batch_size=10):
     
     return torch.tensor(batch_x), torch.tensor(batch_t)
 
+
+
 def main():
     training_size = 10000
     test_size = 1000
-    epochs_num = 1000
+    epochs_num = 10#1000
     hidden_size = 5
     batch_size = 100
 
     train_x, train_t = mkDataSet(training_size)
     test_x, test_t = mkDataSet(test_size)
 
-    model = Predictor(1, hidden_size, 1)
+    test_x, test_t = stockDataSet(code)
+
+
+    feature_num = 6 #5'High','Low','Open','Close','Volume','Adj Close'
+    model = Predictor(feature_num, hidden_size, 1)
     criterion = nn.MSELoss()
     optimizer = SGD(model.parameters(), lr=0.01)
 

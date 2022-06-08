@@ -105,7 +105,7 @@ Date
 [1588 rows x 6 columns]
 '''
 
-print(df)
+#print(df)
 #データをtrain, testに分割するIndex
 #val_idx_from = 3500
 #test_idx_from = 4000
@@ -133,13 +133,13 @@ cols = ['High','Low','Open','Close','Volume','Adj Close']
 #cols = ['High','Low','Open','Close','Volume']
 
 #出来高のデータに缺損があったため抜いた
-for col in cols:
-    df[col] = df[col].rolling(window=25, min_periods=25).mean()
-    #df[col] = df[col] / df[col] - 1
+#for col in cols:
+#    df[col] = df[col].rolling(window=25, min_periods=25).mean()
+#    df[col] = df[col] / df[col] - 1
 
 
 X_data = df.iloc[moving_average_num:-future_num][cols].values
-print(X_data)
+#print(df,X_data)
 #データをtrain, testに分割するIndex
 val_idx_from = int(len(X_data) * 0.8) # 全データのうち、80% のサイズを取得
 test_idx_from = 4000
@@ -151,7 +151,7 @@ test_idx_from = 4000
 #学習用データ
 X_train = torch.tensor(X_data[:val_idx_from], dtype=torch.float, device=device)
 y_train = torch.tensor(y_data[:val_idx_from], dtype=torch.float, device=device)
-print(X_data,y_train)
+#print(X_data,y_train)
 #評価用データ
 X_val   = torch.tensor(X_data[val_idx_from:], dtype=torch.float, device=device)
 y_val   = y_data[val_idx_from:]
@@ -291,7 +291,7 @@ for epoch in range(n_epocs):
     with torch.no_grad():
         feats_val = prepare_data(np.arange(time_steps, X_val.size(0)), time_steps, X_val, feature_num, device)
         val_scores = model(feats_val)
-        print(val_scores)
+        #print(val_scores)
         tmp_scores = val_scores.view(-1).to('cpu').numpy()
         bi_scores = np.round(tmp_scores)
         acc_score = accuracy_score(y_val[time_steps:], bi_scores)
@@ -311,6 +311,7 @@ model.load_state_dict(torch.load(model_name))
 with torch.no_grad():
     feats_test = prepare_data(np.arange(time_steps, X_test.size(0)), time_steps, X_test, feature_num, device)
     val_scores = model(feats_test)
+    print(val_scores)
     tmp_scores = val_scores.view(-1).to('cpu').numpy()   
     bi_scores = np.round(tmp_scores)
     acc_score = accuracy_score(y_test[time_steps:], bi_scores)
