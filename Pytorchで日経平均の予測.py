@@ -214,15 +214,15 @@ class LSTM(nn.Module):
 
         self.linear = nn.Linear(hidden_layer_size, batch_size)
 
-        #self.hidden_cell = (torch.zeros(1, self.batch_size, self.hidden_layer_size),
-        #                    torch.zeros(1, self.batch_size, self.hidden_layer_size))
+        self.hidden_cell = (torch.zeros(1, self.batch_size, self.hidden_layer_size),
+                            torch.zeros(1, self.batch_size, self.hidden_layer_size))
 
     def forward(self, input_seq):
         batch_size, seq_len = input_seq.shape[0], input_seq.shape[1]
-        lstm_out = self.lstm(input_seq.view(seq_len, batch_size, 1)) #lstmのデフォルトの入力サイズは(シーケンスサイズ、バッチサイズ、特徴量次元数)
+        #lstm_out = self.lstm(input_seq.view(seq_len, batch_size, 1)) #lstmのデフォルトの入力サイズは(シーケンスサイズ、バッチサイズ、特徴量次元数)
         predictions = self.linear(self.hidden_cell[0].view(batch_size, -1))
-        return torch.sigmoid(lstm_out)
-        #return predictions[:, 0]
+        #return torch.sigmoid(lstm_out)
+        return predictions[:, 0]
 
 
 
@@ -257,8 +257,8 @@ LSTMのインスタンスを生成し、損失関数と最適化関数を設定�
 loss functionは二値分類（上がるか下がるか）なので、素直にbinary classification entropy loss（BCELoss）を利用、
 optmizerはAdamを利用します。
 '''
-model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
-#model = LSTM(feature_num, lstm_hidden_dim, target_dim).to(device)
+#model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
+model = LSTM(feature_num, lstm_hidden_dim, target_dim).to(device)
 loss_function = nn.BCELoss()
 optimizer= optim.Adam(model.parameters(), lr=1e-4)
 
