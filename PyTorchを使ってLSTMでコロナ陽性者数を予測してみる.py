@@ -239,14 +239,16 @@ train_seq_data = make_sequence_data(train_data_normalized, seq_length)
 
 
 '''LSTMネットワークを構築'''
-#特徴量のサイズ(input_size)は3(PCR 検査陽性者数(単日),東京平均気温,PCR 検査実施件数(単日))、隠れ層のサイズ(hidden_layer_size)は100、LSTM層のサイズ(num_layer)はデフォルトの1、出力のサイズ(output_size)は1(PCR 検査陽性者数(単日)、batch_firstはTrueとします。
+#特徴量のサイズ(input_size)は3(PCR 検査陽性者数(単日),東京平均気温,PCR 検査実施件数(単日))、
+# 隠れ層のサイズ(hidden_layer_size)は100、LSTM層のサイズ(num_layer)はデフォルトの1、
+# 出力のサイズ(output_size)は1(PCR 検査陽性者数(単日)、batch_firstはTrueとします。
 #batch_firstはTrueなので、LSTMへの入力データxのshapeを(batch_size, seq_length, input_size)です。
 #LSTMはlstm_outと(hn, cn)を出力しますが、hnとcnにはNoneを渡して0ベクトルで初期化します。
 #forward関数ではLSTMにxを入力して、seq_length分の出力lstm_outを得ます。
 #seq_length分あるlstm_outのseq_length方向の最後の値を全結合層に渡して、その結果(prediction)を予測値として返却します。
 
 class LSTM(nn.Module):
-    def __init__(self, input_size=3, hidden_layer_size=100, output_size=1):
+    def __init__(self, input_size=6, hidden_layer_size=100, output_size=1):
         super().__init__()
         self.hidden_layer_size = hidden_layer_size
 
@@ -284,9 +286,10 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #train_seq_dataは学習データのシーケンスデータを取得で取得したデータでシーケンスデータとラベルデータのタプルのリストです。
 #1epochでシーケンスデータ全てのデータを学習するバッチ学習になります。
 #学習ごとに勾配初期化、予測、誤差計算、逆伝搬、勾配計算を行って、1epochごとに誤差をlossesに入れてあとで表示します。
-#seqとlabelsはshapeが(seq_length, 特徴量)なのでLSTMに渡すためにunsqueezeして(batch_size, seq_length, 特徴量)にします。本記事ではbatch_sizeは1です。
+#seqとlabelsはshapeが(seq_length, 特徴量)なのでLSTMに渡すためにunsqueezeして(batch_size, seq_length, 特徴量)にします。
+# 本記事ではbatch_sizeは1です。
 
-epochs = 50
+epochs = 3
 losses = []
 for i in range(epochs):
     for seq, labels in train_seq_data:
@@ -309,9 +312,13 @@ plt.plot(losses)
 
 
 '''予測のためのデータ準備'''
-#学習によってパラメータが決定したので、このモデルを使って予測してみます。そのために学習データとテストデータに分割するにて分割したtest_dataをデータを正規化で作成したscalerを用いて変換します。train_dataの正規化で取得した統計情報をtest_data正規化時にも使って変換します。(scaler.fit_transform)
+#学習によってパラメータが決定したので、このモデルを使って予測してみます。
+# そのために学習データとテストデータに分割するにて分割したtest_dataをデータを正規化で作成したscalerを用いて変換します。
+# train_dataの正規化で取得した統計情報をtest_data正規化時にも使って変換します。(scaler.fit_transform)
 #また、pred_daysは予測する日数です。本記事では、30日分のtest_dataとこれから予測する30日分を比較してみます。
-#さらに、test_inputsというリストを用意します。test_inputsには学習データを正規化で正規化した学習データ(train_data_normalized)の直近seq_length(=30)日分を入れます。これは予測時に使います。
+#さらに、test_inputsというリストを用意します。
+# test_inputsには学習データを正規化で正規化した学習データ(train_data_normalized)の直近seq_length(=30)日分を入れます。
+# これは予測時に使います。
 
 # 予測する日数
 pred_days = 30
@@ -355,6 +362,7 @@ np_test_outputs = np.array(test_outputs).reshape(-1,1)
 # 列方向に同じ値を追加して(30, 3)にする
 np_test_outputs2 = np.hstack((np_test_outputs, np_test_outputs))
 np_test_outputs3 = np.hstack((np_test_outputs2, np_test_outputs))
+print(np_test_outputs3)
 actual_predictions = scaler.inverse_transform(np_test_outputs3)
 
 
