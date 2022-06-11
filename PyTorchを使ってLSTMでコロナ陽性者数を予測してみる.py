@@ -489,26 +489,33 @@ fig.show()
 
 #次に結合したデータから必要な特徴量を抽出で作成した実際のデータcovid19_dataをGround Truth、Predictionを予測値(actual_predictions)としてグラフを表示します。
 # 範囲は2020/1/16から2020/11/30です。
-fig, (axA, axL, axM) = plt.subplots(ncols=3, figsize=(30, 5))
+#fig, (axA, axL, axM) = plt.subplots(ncols=3, figsize=(30, 5))
+fig = plt.figure(figsize=(10, 6))
+ax1 = plt.subplot2grid((2, 2), (0, 0))
+ax2 = plt.subplot2grid((2, 2), (1, 0),colspan=2)
+ax3 = plt.subplot2grid((2, 2), (0, 1))
+# 図全体のタイトル
+fig.suptitle("Long Short-Term Memory (Deep Larning) of Artificial Intelligence[AI]", fontsize=20)
+#plt.title("Test Graph", {"fontsize": 20})
 
-axA.plot(losses)
+ax1.plot(losses)
 
-axL.set_title('Number of PCR Positives')
-plt.ylabel('Number of people')
-plt.grid(True)
-plt.autoscale(axis='x', tight=True)
-plt.plot(data['High'], label='Ground Truth')
-plt.plot(x, actual_predictions[:,0], label='Prediction')
-plt.xlabel('2020/1/16 - 11/30')
-plt.legend()
+ax2.set_title('Number of Learning And Prediction')
+ax2.set_ylabel('Number of StockPrice')
+ax2.grid(True)
+ax2.autoscale(axis='x', tight=True)
+ax2.plot(data['High'], label='Ground Truth')
+ax2.plot(x, actual_predictions[:,0], label='Prediction')
+ax2.set_xlabel('2020/1/16 - 11/30')
+ax2.legend()
 #plt.show()
 
 
 #最後に上のグラフの範囲を2020/10/30から2020/11/30の30日間にしたものを表示します。
 #いい感じに直近30日分を予測できました。少なくとも増減傾向は読めていると思います。
 
-plt.title('Number of PCR Positives')
-plt.ylabel('Number of price')
+ax3.set_title('Number of Learning And Prediction')
+plt.ylabel('Number of StockPrice')
 plt.grid(True)
 plt.autoscale(axis='x', tight=True)
 plt.plot(x, data['High'][-1*pred_days:], label='Ground Truth')
