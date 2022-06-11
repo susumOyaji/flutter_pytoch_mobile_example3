@@ -380,7 +380,7 @@ actual_predictions = scaler.inverse_transform(np_test_outputs6)
 # これは後で予測結果表示で使います。
 
 x = np.arange(len_data-pred_days, len_data, 1)
-print(x)
+#print(x)
 
 '''
 [290 291 292 293 294 295 296 297 298 299 300 301 302 303 304 305 306 307
@@ -489,6 +489,9 @@ fig.show()
 
 #次に結合したデータから必要な特徴量を抽出で作成した実際のデータcovid19_dataをGround Truth、Predictionを予測値(actual_predictions)としてグラフを表示します。
 # 範囲は2020/1/16から2020/11/30です。
+fig, (axA, axL, axM) = plt.subplots(ncols=3, figsize=(30, 5))
+
+axA.plot(losses)
 
 plt.title('Number of PCR Positives')
 plt.ylabel('Number of people')
@@ -498,7 +501,7 @@ plt.plot(data['High'], label='Ground Truth')
 plt.plot(x, actual_predictions[:,0], label='Prediction')
 plt.xlabel('2020/1/16 - 11/30')
 plt.legend()
-plt.show()
+#plt.show()
 
 
 #最後に上のグラフの範囲を2020/10/30から2020/11/30の30日間にしたものを表示します。
@@ -514,7 +517,7 @@ plt.xlabel('2020/10/31 - 11/30')
 plt.legend()
 plt.show()
 
-
+fig.show()
 '''終わりに'''
 #本記事では、PyTorchを使ってLSTMを使った時系列予測をコロナという題材で行ってみました。
 # データ数が1年間もないということ、また、特徴量に、電車の乗車数や街への外出人数といったものがなかったというのもあり、
