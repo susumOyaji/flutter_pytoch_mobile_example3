@@ -493,7 +493,7 @@ fig, (axA, axL, axM) = plt.subplots(ncols=3, figsize=(30, 5))
 
 axA.plot(losses)
 
-plt.title('Number of PCR Positives')
+axL.set_title('Number of PCR Positives')
 plt.ylabel('Number of people')
 plt.grid(True)
 plt.autoscale(axis='x', tight=True)
