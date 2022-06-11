@@ -81,6 +81,29 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # https://www.mhlw.go.jp/stf/covid-19/open-data.html
 #data3 = pd.read_csv('/content/drive/My Drive/pcr_tested_daily.csv').fillna(0)
 
+#全データ数を取得
+code = '6758'  # '6758'
+#2021年から今日までの1年間のデータを取得しましょう。期日を決めて行きます。
+# (2021, 1, 1)  # 教師データ(今までのデータ)
+start_train = datetime.date.today() + relativedelta(days=-700)
+# 昨日分(today-1日)まで取得できる（当日分は変動しているため）
+end_train = datetime.date.today() + relativedelta(days=-1)
+
+train_x = []
+train_t = []
+future_num = 1  # 何日先を予測するか
+
+data = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)  # 教師データを読み込む。
+
+
+# 日付をインデックスにセット
+#data.set_index(keys='Date', inplace=True)
+data = data.reset_index(drop=False)
+#カラム名の取得
+#cols = ['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']
+#X_data = df.iloc[:-future_num][cols].values
+
+
 '''3つのデータファイルを結合'''
 #ロードした3つのデータファイルを結合して1つのデータファイルにします。
 
@@ -90,9 +113,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 #結合したデータを確認
 #データのshapeは(全日数, (日付,PCR 検査陽性者数(単日),東京平均気温,PCR 検査実施件数(単日)))です。
-
-#print(data.shape)
-#print(data.tail(5))
+print(data.shape)
+print(data.tail(5))
 
 '''
 以下のように出力されるかと思います。
@@ -106,42 +128,21 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 319  2020/11/30            1429     9.9         41335.0
 '''
 
-#全データ数を取得
-code = '6758'  # '6758'
-#2021年から今日までの1年間のデータを取得しましょう。期日を決めて行きます。
-# (2021, 1, 1)  # 教師データ(今までのデータ)
-start_train = datetime.date.today() + relativedelta(days=-700)
-# 昨日分(today-1日)まで取得できる（当日分は変動しているため）
-end_train = datetime.date.today() + relativedelta(days=-1)
-
-train_x = []
-train_t = []
-future_num = 1  # 何日先を予測するか
-
-df = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)  # 教師データを読み込む。
-
-#カラム名の取得
-#cols = ['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']
-#X_data = df.iloc[:-future_num][cols].values
-
-
-
-
-
 
 #全データの数をlen_dataに入れます。
-len_data = df.shape[0]
+len_data = data.shape[0]
 
 #結合したデータから必要な特徴量を抽出
 #必要な特徴量はPCR 検査陽性者数(単日), 東京平均気温, PCR 検査実施件数(単日)の3つです。
 #必要な特徴量は'High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close'の6つです。
-covid19_data = df[['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']]
+covid19_data = data[['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']]
 
 print(covid19_data)
-data = covid19_data
+
 
 #特徴量を時系列にグラフ表示
-#左からPCR 検査陽性者数(単日), 東京平均気温, PCR 検査実施件数(単日)をグラフ表示します。x軸は2020/1/16から数えて320日分のindex番号になっています。
+#左からPCR 検査陽性者数(単日), 東京平均気温, PCR 検査実施件数(単日)をグラフ表示します。
+# x軸は2020/1/16から数えて320日分のindex番号になっています。
 '''
 fig, (axL, axM, axR) = plt.subplots(ncols=3, figsize=(20,5))
 
@@ -169,9 +170,9 @@ fig.show()
 '''float型に変換'''
 covid19_data = covid19_data.values.astype(float)
 covid19_data.shape
-
 #特徴量は日付がなくなり3つになっています。
 #(320, 3)
+
 
 '''学習データとテストデータに分割する'''
 #直近の30日をテストデータにして、これ以前を学習データにします。
@@ -187,15 +188,14 @@ test_data = covid19_data[-test_data_size:]
 
 # データセットの正規化を行う。最小値0と最大値1の範囲で行う。
 from sklearn.preprocessing import MinMaxScaler
-
 scaler = MinMaxScaler(feature_range=(0, 1))
 train_data_normalized = scaler.fit_transform(train_data)
 
-#Tensor型に変換
-#PyTorchを使うのでTensor型にします。
 
-# Tensor型に変換
+'''Tensor型に変換'''
+#PyTorchを使うのでTensor型にします。
 train_data_normalized = torch.FloatTensor(train_data_normalized)
+
 
 '''
 シーケンスデータ作成関数を定義
@@ -221,7 +221,7 @@ def make_sequence_data(input_data, num_sequence):
         # 1個ずらして、シーケンス分のデータを取得していく
         seq_data = input_data[i:i+num_sequence]
         # シーケンスの次の要素のデータ(ラベルデータとして1個目の陽性者数のみ)を取得していく
-        #target_dataに入れるのは特徴量のうち'High'のみです。
+        # target_dataに入れるのは特徴量のうち'High'のみです。
         target_data = input_data[:,0][i+num_sequence:i+num_sequence+1]
         # シーケンスデータとラベルデータをタプルとして取得していく
         data.append((seq_data, target_data))
@@ -361,7 +361,7 @@ for i in range(pred_days):
 # 予測値test_outputsを列方向に同じ列を2回足して(30, 3)に変換していますが、
 # これはデータを正規化で使用した統計情報は学習データに対応した特徴量が3次元のため、1次元の予測値を無理矢理3次元にしています。
 # これは本来なら正規化に用いたscalerを学習データとラベル(=予測値)とで分けるべきなのですが、本記事では一緒にしちゃってます。
-print(test_data_normalized)
+#print(test_data_normalized)
 np_test_outputs = np.array(test_outputs).reshape(-1,1)
 # 列方向に同じ値を追加して(30, 6)にする
 np_test_outputs2 = np.hstack((np_test_outputs, np_test_outputs))
@@ -369,9 +369,9 @@ np_test_outputs3 = np.hstack((np_test_outputs2, np_test_outputs))
 np_test_outputs4 = np.hstack((np_test_outputs3, np_test_outputs))
 np_test_outputs5 = np.hstack((np_test_outputs4, np_test_outputs))
 np_test_outputs6 = np.hstack((np_test_outputs5, np_test_outputs))
-print(np_test_outputs6)
+#print(np_test_outputs6)
 actual_predictions = scaler.inverse_transform(np_test_outputs6)
-print(actual_predictions[:,0])
+#print(actual_predictions[:,0])
 
 
 
@@ -494,7 +494,7 @@ plt.title('Number of PCR Positives')
 plt.ylabel('Number of people')
 plt.grid(True)
 plt.autoscale(axis='x', tight=True)
-plt.plot(df['High'], label='Ground Truth')
+plt.plot(data['High'], label='Ground Truth')
 plt.plot(x, actual_predictions[:,0], label='Prediction')
 plt.xlabel('2020/1/16 - 11/30')
 plt.legend()
@@ -508,7 +508,7 @@ plt.title('Number of PCR Positives')
 plt.ylabel('Number of price')
 plt.grid(True)
 plt.autoscale(axis='x', tight=True)
-plt.plot(x, df['High'][-1*pred_days:], label='Ground Truth')
+plt.plot(x, data['High'][-1*pred_days:], label='Ground Truth')
 plt.plot(x, actual_predictions[:,0], label='Prediction')
 plt.xlabel('2020/10/31 - 11/30')
 plt.legend()
