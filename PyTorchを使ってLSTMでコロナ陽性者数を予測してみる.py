@@ -390,102 +390,10 @@ x = np.arange(len_data-pred_days, len_data, 1)
 
 '''予測結果表示'''
 #まずはグラフのサイズを調整します。
-
 fig_size = plt.rcParams['figure.figsize']
 fig_size[0] = 10
 fig_size[1] = 5
 plt.rcParams['figure.figsize'] = fig_size
-
-'''
-#描画するデータの読み込み
-fig = plt.figure(figsize=(15, 10), dpi=100)
-ax = fig.add_subplot(2, 1, 1)
-# 図全体のタイトル
-fig.suptitle(
-    "Long Short-Term Memory (Deep Larning) of Artificial Intelligence[AI]", fontsize=20)
-plt.title("Test Graph", {"fontsize": 20})
-
-
-ax1 = plt.subplot(2, 2, 1)   # 2x2の1番目
-ax1.plot(losses)  # 1番目に描画
-ax1.legend(loc='best')
-ax1.grid()
-ax1.set_xlabel('Date')   # 1番目にxラベルを追加
-ax1.set_ylabel(f'{code}')   # 1番目にyラベルを追加
-
-
-ax2 = plt.subplot(2, 2, 2)   # 2x2の1番目
-ax2.plot(df['High'])  # 1番目に描画
-ax2.plot('')   # 1番目に追加描画
-ax2.legend(loc='best')
-ax2.grid()
-ax2.set_xlabel('2020/1/16-11/30')   # 1番目にxラベルを追加
-ax2.set_ylabel('Number of people')   # 1番目にyラベルを追加
-
-
-
-ax3 = plt.subplot(2, 2, 3)   # 2x2の3番目
-ax3.plot(df['Close'], marker='.', label='predicted')  # 1番目に描画
-ax3.plot('')  # 1番目に追加描画
-ax3.legend(loc='best')
-ax3.grid()
-ax3.set_xlabel('Date')
-ax3.set_ylabel(f'{code}')
-
-
-
-ax4 = plt.subplot(2, 2, 4)   # 2x2の4番目
-ax4.plot(df['Adj Close'])  # 1番目に描画
-ax4.plot('')  # 1番目に追加描画
-ax4.legend(loc='best')
-ax4.grid()
-ax4.set_xlabel('Date')   # 1番目にxラベルを追加
-ax4.set_ylabel(f'{code}')   # 1番目にyラベルを追加
-
-
-# グラフを表示する
-plt.show()
-
-
-
-
-
-
-
-fig, (axA,axL, axM, axR) = plt.subplots(ncols=4, figsize=(30,5))
-
-axA.plot(losses)
-
-axL.plot(df['High'], linewidth=2)
-axL.set_title('Number of PCR Positive')
-axL.set_xlabel('2020/1/16-11/30')
-axL.set_ylabel('Number of people')
-axL.grid(True)
-
-axM.plot(df['Close'], linewidth=2)
-axM.set_title('Average Temperature in Tokyo')
-axM.set_xlabel('2020/1/16-11/30')
-axM.set_ylabel('Average temperature')
-axM.grid(True)
-
-axR.plot(df['Adj Close'], linewidth=2)
-axR.set_title('Number of PCR Inspections')
-axR.set_xlabel('2020/1/16-11/30')
-axR.set_ylabel('Number of inspections')
-axR.grid(True)
-
-
-
-
-
-
-
-
-
-
-fig.show()
-'''
-
 
 #次に結合したデータから必要な特徴量を抽出で作成した実際のデータcovid19_dataをGround Truth、Predictionを予測値(actual_predictions)としてグラフを表示します。
 # 範囲は2020/1/16から2020/11/30です。
@@ -494,10 +402,12 @@ fig = plt.figure(figsize=(10, 6))
 ax1 = plt.subplot2grid((2, 2), (0, 0))
 ax2 = plt.subplot2grid((2, 2), (1, 0),colspan=2)
 ax3 = plt.subplot2grid((2, 2), (0, 1))
+
 # 図全体のタイトル
 fig.suptitle("Long Short-Term Memory (Deep Larning) of Artificial Intelligence[AI]", fontsize=20)
-#plt.title("Test Graph", {"fontsize": 20})
 
+ax1.set_title('Loss of learning')
+ax1.set_xlabel('Epochs')
 ax1.plot(losses)
 
 ax2.set_title('Number of Learning And Prediction')
