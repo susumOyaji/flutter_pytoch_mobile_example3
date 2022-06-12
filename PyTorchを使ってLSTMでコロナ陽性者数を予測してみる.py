@@ -370,9 +370,9 @@ np_test_outputs3 = np.hstack((np_test_outputs2, np_test_outputs))
 np_test_outputs4 = np.hstack((np_test_outputs3, np_test_outputs))
 np_test_outputs5 = np.hstack((np_test_outputs4, np_test_outputs))
 np_test_outputs6 = np.hstack((np_test_outputs5, np_test_outputs))
-#print(np_test_outputs6)
+print(np_test_outputs6)
 actual_predictions = scaler.inverse_transform(np_test_outputs6)
-#print(actual_predictions[:,0])
+print(actual_predictions[:,0])
 
 
 
