@@ -135,10 +135,11 @@ len_data = data.shape[0]
 #結合したデータから必要な特徴量を抽出
 #必要な特徴量はPCR 検査陽性者数(単日), 東京平均気温, PCR 検査実施件数(単日)の3つです。
 #必要な特徴量は'High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close'の6つです。
-covid19_data = data[['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']]
+#covid19_data = data[['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']]
+#print(covid19_data)
 
+covid19_data = data[['Adj Close', 'Low', 'Open', 'Close', 'Volume', 'High']]
 print(covid19_data)
-
 
 #特徴量を時系列にグラフ表示
 #左からPCR 検査陽性者数(単日), 東京平均気温, PCR 検査実施件数(単日)をグラフ表示します。
@@ -390,21 +391,23 @@ x = np.arange(len_data-pred_days, len_data, 1)
 
 '''予測結果表示'''
 #まずはグラフのサイズを調整します。
-fig_size = plt.rcParams['figure.figsize']
-fig_size[0] = 10
-fig_size[1] = 5
-plt.rcParams['figure.figsize'] = fig_size
+#fig_size = plt.rcParams['figure.figsize']
+#fig_size[0] = 10
+#fig_size[1] = 5
+#plt.rcParams['figure.figsize'] = fig_size
 
 #次に結合したデータから必要な特徴量を抽出で作成した実際のデータcovid19_dataをGround Truth、Predictionを予測値(actual_predictions)としてグラフを表示します。
 # 範囲は2020/1/16から2020/11/30です。
 #fig, (axA, axL, axM) = plt.subplots(ncols=3, figsize=(30, 5))
-fig = plt.figure(figsize=(10, 6))
-ax1 = plt.subplot2grid((2, 2), (0, 0))
-ax2 = plt.subplot2grid((2, 2), (1, 0),colspan=2)
-ax3 = plt.subplot2grid((2, 2), (0, 1))
+fig = plt.figure(figsize=(10, 6))#全体のサイズ
 
+ax1 = plt.subplot2grid((2, 2), (0, 0))
+ax2 = plt.subplot2grid((2, 2), (0, 1))
+ax3 = plt.subplot2grid((2, 2), (1, 0), colspan=2)
+plt.subplots_adjust(hspace=0.4)
+plt.subplots_adjust(wspace=0.4)
 # 図全体のタイトル
-fig.suptitle("Long Short-Term Memory (Deep Larning) of Artificial Intelligence[AI]", fontsize=20)
+fig.suptitle("Long Short-Term Memory (Deep Larning) of Artificial Intelligence[AI]", fontsize=15)
 
 ax1.set_title('Loss of learning')
 ax1.set_xlabel('Epochs')
@@ -417,7 +420,7 @@ ax2.autoscale(axis='x', tight=True)
 ax2.plot(data['High'], label='Ground Truth')
 ax2.plot(x, actual_predictions[:,0], label='Prediction')
 ax2.set_xlabel('2020/1/16 - 11/30')
-ax2.legend()
+ax2.legend()  # 凡例（英語ではlegend：レジェンド)
 #plt.show()
 
 
@@ -433,6 +436,7 @@ plt.plot(x, actual_predictions[:,0], label='Prediction')
 plt.xlabel('2020/10/31 - 11/30')
 plt.legend()
 plt.show()
+
 
 fig.show()
 '''終わりに'''
