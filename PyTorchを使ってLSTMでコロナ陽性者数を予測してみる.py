@@ -85,16 +85,16 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 code = '6758'  # '6758'
 #2021年から今日までの1年間のデータを取得しましょう。期日を決めて行きます。
 # (2021, 1, 1)  # 教師データ(今までのデータ)
-start_train = datetime.date.today() + relativedelta(days=-700)
+start_train = datetime.date.today() + relativedelta(days=-500)
 # 昨日分(today-1日)まで取得できる（当日分は変動しているため）
-end_train = datetime.date.today() + relativedelta(days=-1)
+end_train = datetime.date.today()# + relativedelta(days=-1)
 
 train_x = []
 train_t = []
 future_num = 1  # 何日先を予測するか
 
 data = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)  # 教師データを読み込む。
-
+Nikkei_df = pdr.get_data_yahoo('^N225', start_train, end_train)  # 試験データのcsvファイルを読み込む。
 
 # 日付をインデックスにセット
 #data.set_index(keys='Date', inplace=True)
@@ -102,6 +102,10 @@ data = data.reset_index(drop=False)
 #カラム名の取得
 #cols = ['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']
 #X_data = df.iloc[:-future_num][cols].values
+
+
+# Closeの列のデータのみを取り出し
+data['NikkiClose'] = Nikkei_df['Close'].values
 
 
 '''3つのデータファイルを結合'''
@@ -114,7 +118,7 @@ data = data.reset_index(drop=False)
 #結合したデータを確認
 #データのshapeは(全日数, (日付,PCR 検査陽性者数(単日),東京平均気温,PCR 検査実施件数(単日)))です。
 print(data.shape)
-print(data.tail(5))
+print(data.tail(30))
 
 '''
 以下のように出力されるかと思います。
@@ -138,8 +142,9 @@ len_data = data.shape[0]
 #covid19_data = data[['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']]
 #print(covid19_data)
 
-covid19_data = data[['Adj Close', 'Low', 'Open', 'Close', 'Volume', 'High']]
+covid19_data = data[['Close', 'Low', 'Open', 'Adj Close', 'High','NikkiClose']]
 print(covid19_data)
+data = covid19_data
 
 #特徴量を時系列にグラフ表示
 #左からPCR 検査陽性者数(単日), 東京平均気温, PCR 検査実施件数(単日)をグラフ表示します。
@@ -175,16 +180,19 @@ covid19_data.shape
 #(320, 3)
 
 
+
+
 '''学習データとテストデータに分割する'''
-#直近の30日をテストデータにして、これ以前を学習データにします。
-# 直近30日をテストデータにする
 test_data_size = 30
 
-train_data = covid19_data[:-test_data_size]
-test_data = covid19_data[-test_data_size:]
+#直近の30日をテストデータにして、これ以前を学習データにします。
+train_data = covid19_data[:-test_data_size]#学習データ
+
+# 直近30日をテストデータにする
+test_data = covid19_data[-test_data_size:]#テストデータ
 
 
-'''学習データを正規化'''
+'''学習データ(train_data)を正規化'''
 #特徴量を時系列にグラフ表示に示した通り、割とデータには開きがあります。なので、最小値と最大値を決めた正規化を学習データに行います。
 
 # データセットの正規化を行う。最小値0と最大値1の範囲で行う。
@@ -228,6 +236,21 @@ def make_sequence_data(input_data, num_sequence):
         data.append((seq_data, target_data))
 
     return data
+
+
+#関数prepare_dataではLSTMに入力するデータを30日分ずつまとめる役割を果たしています。
+def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
+    feats = torch.zeros((len(batch_idx), time_steps, feature_num), dtype=torch.float, device=device)
+    for b_i, b_idx in enumerate(batch_idx):
+        # 過去の30日分をtime stepのデータとして格納する。
+        b_slc = slice(b_idx + 1 - time_steps ,b_idx + 1)
+        feats[b_i, :, :] = X_data[b_slc, :]
+
+    return feats
+
+
+
+
 
 
 
@@ -280,9 +303,14 @@ model.to(device)
 
 '''損失関数と最適化関数を定義'''
 #損失関数は、平均二乗誤差、最適化関数はAdamとします。Adamの学習率(lr)はデフォルト0.001です。
-
 # 損失関数と最適化関数を定義
+#入力の各要素間の平均二乗誤差(L2ノルムの二乗)を測定する基準を作成します
 criterion = nn.MSELoss()
+
+#バイナリクロスエントロピー損失を計算します。
+# これは、0または1（したがってバイナリ）のいずれかである1つ以上のターゲットがある場合に適用されます。
+binary_criterion= nn.BCELoss()
+
 optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 
@@ -293,7 +321,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #seqとlabelsはshapeが(seq_length, 特徴量)なのでLSTMに渡すためにunsqueezeして(batch_size, seq_length, 特徴量)にします。
 # 本記事ではbatch_sizeは1です。
 
-epochs = 3
+epochs = 10
 losses = []
 for i in range(epochs):
     for seq, labels in train_seq_data:
@@ -313,6 +341,11 @@ for i in range(epochs):
 #学習データの損失をグラフ表示します。順調に下がっています。
 
 #plt.plot(losses)
+
+
+
+torch.save(model.state_dict(),"assets/models/pytorch_v1.mdl")
+print('best score updated, Pytorch model was saved!!', )
 
 
 '''予測のためのデータ準備'''
@@ -343,6 +376,8 @@ test_inputs = train_data_normalized[-seq_length:].tolist()
 # つまり、予測時に使うデータは全て、結合したデータから必要な特徴量を抽出で作成した実際のデータcovid19_dataを使います。
 # 予測値は予測のためには使いません。そして予測値はtest_outputsに入れます。
 
+
+model.load_state_dict(torch.load("assets/models/pytorch_v1.mdl"))
 # モデルを評価モードとする
 model.eval()
 # 予測値を入れるリスト
@@ -370,7 +405,7 @@ np_test_outputs3 = np.hstack((np_test_outputs2, np_test_outputs))
 np_test_outputs4 = np.hstack((np_test_outputs3, np_test_outputs))
 np_test_outputs5 = np.hstack((np_test_outputs4, np_test_outputs))
 np_test_outputs6 = np.hstack((np_test_outputs5, np_test_outputs))
-print(np_test_outputs6)
+#print(np_test_outputs6)
 actual_predictions = scaler.inverse_transform(np_test_outputs6)
 print(actual_predictions[:,0])
 
@@ -409,15 +444,15 @@ plt.subplots_adjust(wspace=0.4)
 # 図全体のタイトル
 fig.suptitle("Long Short-Term Memory (Deep Larning) of Artificial Intelligence[AI]", fontsize=15)
 
-ax1.set_title('Loss of learning')
+ax1.set_title('Loss of learning',fontsize=10)
 ax1.set_xlabel('Epochs')
 ax1.plot(losses)
 
-ax2.set_title('Number of Learning And Prediction')
+ax2.set_title('Number of Learning And Prediction',fontsize=10)
 ax2.set_ylabel('Number of StockPrice')
 ax2.grid(True)
 ax2.autoscale(axis='x', tight=True)
-ax2.plot(data['High'], label='Ground Truth')
+ax2.plot(data['Close'], label='Ground Truth')
 ax2.plot(x, actual_predictions[:,0], label='Prediction')
 ax2.set_xlabel('2020/1/16 - 11/30')
 ax2.legend()  # 凡例（英語ではlegend：レジェンド)
@@ -427,11 +462,11 @@ ax2.legend()  # 凡例（英語ではlegend：レジェンド)
 #最後に上のグラフの範囲を2020/10/30から2020/11/30の30日間にしたものを表示します。
 #いい感じに直近30日分を予測できました。少なくとも増減傾向は読めていると思います。
 
-ax3.set_title('Number of Learning And Prediction')
+ax3.set_title('Number of Learning And Prediction',fontsize=10)
 plt.ylabel('Number of StockPrice')
 plt.grid(True)
 plt.autoscale(axis='x', tight=True)
-plt.plot(x, data['High'][-1*pred_days:], label='Ground Truth')
+plt.plot(x, data['Close'][-1*pred_days:], label='Ground Truth')
 plt.plot(x, actual_predictions[:,0], label='Prediction')
 plt.xlabel('2020/10/31 - 11/30')
 plt.legend()

@@ -260,6 +260,8 @@ optmizerはAdamを利用します。
 #model = LSTMClassifier(feature_num, lstm_hidden_dim, target_dim).to(device)
 model = LSTM(feature_num, lstm_hidden_dim, target_dim).to(device)
 loss_function = nn.BCELoss()
+#バイナリクロスエントロピー損失を計算します。
+# これは、0または1（したがってバイナリ）のいずれかである1つ以上のターゲットがある場合に適用されます。
 optimizer= optim.Adam(model.parameters(), lr=1e-4)
 
 
