@@ -85,7 +85,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 code = '6758'  # '6758'
 #2021年から今日までの1年間のデータを取得しましょう。期日を決めて行きます。
 # (2021, 1, 1)  # 教師データ(今までのデータ)
-start_train = datetime.date.today() + relativedelta(days=-500)
+start_train = datetime.date.today() + relativedelta(days=-700)
 # 昨日分(today-1日)まで取得できる（当日分は変動しているため）
 end_train = datetime.date.today()# + relativedelta(days=-1)
 
@@ -101,7 +101,7 @@ Nikkei_df = pdr.get_data_yahoo('^N225', start_train, end_train)  # 試験デー�
 data = data.reset_index(drop=False)
 #カラム名の取得
 #cols = ['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']
-#X_data = df.iloc[:-future_num][cols].values
+X_data = data.iloc[-future_num:]['Close'].values
 
 
 # Closeの列のデータのみを取り出し
@@ -279,6 +279,7 @@ class LSTM(nn.Module):
         super().__init__()
         self.hidden_layer_size = hidden_layer_size
 
+        #batch_firstはTrueなので、LSTMへの入力データxのshapeを(batch_size, seq_length, input_size)です。
         self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_layer_size, batch_first=True)
 
         self.linear = nn.Linear(in_features=hidden_layer_size, out_features=output_size)
@@ -291,7 +292,7 @@ class LSTM(nn.Module):
         # Linearのinputは(N,∗,in_features)にする
         # lstm_out(batch_size, seq_len, hidden_layer_size)のseq_len方向の最後の値をLinearに入力する
         prediction = self.linear(lstm_out[:, -1, :])
-        return prediction
+        return prediction #predictioを予測値として返却します。
 
 
 #LSTMネットワークインスタンスを生成
@@ -321,7 +322,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #seqとlabelsはshapeが(seq_length, 特徴量)なのでLSTMに渡すためにunsqueezeして(batch_size, seq_length, 特徴量)にします。
 # 本記事ではbatch_sizeは1です。
 
-epochs = 10
+epochs = 3
 losses = []
 for i in range(epochs):
     for seq, labels in train_seq_data:
@@ -407,8 +408,10 @@ np_test_outputs5 = np.hstack((np_test_outputs4, np_test_outputs))
 np_test_outputs6 = np.hstack((np_test_outputs5, np_test_outputs))
 #print(np_test_outputs6)
 actual_predictions = scaler.inverse_transform(np_test_outputs6)
-print(actual_predictions[:,0])
 
+print('X_data=',X_data, 'Prediction=',actual_predictions[:,0][-1])#リストの最後の要素を取得する
+
+print(actual_predictions[:,0][-1]/X_data)
 
 
 '''予測結果グラフ表示のための準備'''
@@ -466,8 +469,9 @@ ax3.set_title('Number of Learning And Prediction',fontsize=10)
 plt.ylabel('Number of StockPrice')
 plt.grid(True)
 plt.autoscale(axis='x', tight=True)
-plt.plot(x, data['Close'][-1*pred_days:], label='Ground Truth')
-plt.plot(x, actual_predictions[:,0], label='Prediction')
+plt.plot(x, data['Close'][-1*pred_days:], label='Ground Truth',marker="o")
+plt.plot(x, actual_predictions[:,0], label='Prediction',marker="o")
+#plt.text(x, actual_predictions[:,0], '({x}, {y})'.format(x=x, y=actual_predictions[:,0]), fontsize=10)
 plt.xlabel('2020/10/31 - 11/30')
 plt.legend()
 plt.show()
