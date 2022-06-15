@@ -20,7 +20,7 @@ future_num = 1#144
 #価格が上がるか下がるかを予測する未来の10分足数です。
 #ここでは10分足データの144足分のため、1日先の価格が上がるか下がるか、の予測となります。
 
-feature_num = 6 
+feature_num = 5 
 #入力データの特徴量の数で、Volume、Open, High, Low, Close, Adj Closeの6項目を利用します。
 
 batch_size = 128

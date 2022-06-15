@@ -105,7 +105,7 @@ X_data = data.iloc[-future_num:]['Close'].values
 
 
 # Closeの列のデータのみを取り出し
-data['NikkiClose'] = Nikkei_df['Close'].values
+data['N_Adj Close'] = Nikkei_df['Adj Close'].values
 
 
 '''3つのデータファイルを結合'''
@@ -142,7 +142,7 @@ len_data = data.shape[0]
 #covid19_data = data[['High', 'Low', 'Open', 'Close', 'Volume', 'Adj Close']]
 #print(covid19_data)
 
-covid19_data = data[['Close', 'Low', 'Open', 'Adj Close', 'High','NikkiClose']]
+covid19_data = data[['High', 'Low', 'Open', 'Close', 'Adj Close', 'N_Adj Close']]
 print(covid19_data)
 data = covid19_data
 
@@ -172,6 +172,12 @@ axR.grid(True)
 
 fig.show()
 '''
+
+
+model = torch.hub.load('rwightman/pytorch-image-models:master', 'resnet18', pretrained=True)
+print(model)
+
+
 
 '''float型に変換'''
 covid19_data = covid19_data.values.astype(float)
@@ -231,7 +237,9 @@ def make_sequence_data(input_data, num_sequence):
         seq_data = input_data[i:i+num_sequence]
         # シーケンスの次の要素のデータ(ラベルデータとして1個目の陽性者数のみ)を取得していく
         # target_dataに入れるのは特徴量のうち'High'のみです。
-        target_data = input_data[:,0][i+num_sequence:i+num_sequence+1]
+        target_data = input_data[:,4][i+num_sequence:i+num_sequence+1]#Adj Close
+        #[:, 0]は全ての行の0列目を取得することになります。
+        #省略せずに書くと2x2の配列の場合ならa[0:2, 0]となります。
         # シーケンスデータとラベルデータをタプルとして取得していく
         data.append((seq_data, target_data))
 
@@ -263,7 +271,6 @@ def prepare_data(batch_idx, time_steps, X_data, feature_num, device):
 seq_length = 30
 # train_seq_data=最初のデータを1個ずらしてシーケンス分のデータ(時系列の学習データ群)、train_target=train_seq_dataの次のデータ(ラベルデータ)
 train_seq_data = make_sequence_data(train_data_normalized, seq_length)
-
 
 '''LSTMネットワークを構築'''
 #特徴量のサイズ(input_size)は3(PCR 検査陽性者数(単日),東京平均気温,PCR 検査実施件数(単日))、
@@ -322,7 +329,7 @@ optimizer = optim.Adam(model.parameters(), lr=0.001)
 #seqとlabelsはshapeが(seq_length, 特徴量)なのでLSTMに渡すためにunsqueezeして(batch_size, seq_length, 特徴量)にします。
 # 本記事ではbatch_sizeは1です。
 
-epochs = 3
+epochs = 5
 losses = []
 for i in range(epochs):
     for seq, labels in train_seq_data:
@@ -390,7 +397,6 @@ for i in range(pred_days):
     with torch.no_grad():
         test_inputs.append(test_data_normalized.tolist()[i]) #test_inputsにtest_data_normalizedを追加
         test_outputs.append(model(seq).item())
-
 
 
 '''予測結果の整形'''

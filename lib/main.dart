@@ -1,3 +1,5 @@
+//flutter_pytorch_mobile
+
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -42,10 +44,10 @@ class _MyAppState extends State<MyApp> {
 
   //load your model
   Future loadModel() async {
-    String pathImageModel = "assets/models/resnet.pt";
+    //String pathImageModel = "assets/models/resnet.pt";
     String pathCustomModel = "assets/models/custom_model.pt";
     try {
-      _imageModel = await PyTorchMobile.loadModel(pathImageModel);
+      //_imageModel = await PyTorchMobile.loadModel(pathImageModel);
       _customModel = await PyTorchMobile.loadModel(pathCustomModel);
     } on PlatformException {
       print("only supported for android and ios so far");
@@ -102,22 +104,6 @@ class _MyAppState extends State<MyApp> {
         body: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-            _image == null ? Text('No image selected.') : Image.file(_image!),
-            Center(
-              child: Visibility(
-                visible: _imagePrediction != null,
-                child: Text("$_imagePrediction"),
-              ),
-            ),
-            Center(
-              child: TextButton(
-                onPressed: runImageModel,
-                child: Icon(
-                  Icons.add_a_photo,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
             TextButton(
               onPressed: runCustomModel,
               style: TextButton.styleFrom(
