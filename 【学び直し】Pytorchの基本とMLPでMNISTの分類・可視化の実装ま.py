@@ -9,6 +9,7 @@ tensorとは、numpy の ndarray のようなもの。ようは、任意の次�
 
 以下が例になります。
 '''
+import matplotlib.pyplot as plt
 import os
 import torch
 from torchsummary import summary
@@ -194,7 +195,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.utils.tensorboard import SummaryWriter
+#from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from torchvision import datasets, transforms
@@ -237,9 +238,10 @@ class MLPNet (nn.Module):
         return F.relu(self.fc3(x))
 
 net = MLPNet().to(device)
+print(net)
 
 # torchsummaryを使った可視化
-summary(net, input_size=(1, 1 * 28 * 28))
+#summary(net, input_size=(1, 1 * 28 * 28))
 
 # loss関数
 criterion = nn.CrossEntropyLoss()
@@ -257,6 +259,7 @@ optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 #writer = SummaryWriter(log_path)
 
 epochs = 3
+loss = []
 
 for epoch in range(epochs):
     train_loss = 0
@@ -311,11 +314,22 @@ for epoch in range(epochs):
     print ('Epoch [{}/{}], Loss: {loss:.4f}, val_loss: {val_loss:.4f}, val_acc: {val_acc:.4f}'
                    .format(epoch+1, epochs, loss=avg_train_loss, val_loss=avg_val_loss, val_acc=avg_val_acc))
 
+
+
+
     # tensorboard用
     #writer.add_scalars('loss', {'train_loss':avg_train_loss, 'val_loss':avg_val_loss},epoch+1)
     #writer.add_scalars('accuracy', {'train_acc':avg_train_acc, 'val_acc':avg_val_acc}, epoch+1)
 
 #writer.close()
+
+plt.title('Loss of learning', fontsize=10)
+plt.grid(True)
+plt.xlabel('Epochs')
+plt.plot(loss)
+plt.show()
+
+
 
 
 # 追加部分
@@ -330,7 +344,7 @@ model_save_path = os.path.join(dir_name, "model_full.pt")
 #torch.save(net, model_save_path)
 
 # モデルロード
-model_full = torch.load(model_save_path)
+#model_full = torch.load(model_save_path)
 
 
 '''
@@ -343,12 +357,14 @@ model_full = torch.load(model_save_path)
 torch.save(net.to('cpu').state_dict(), model_save_path)
 
 # モデルロード
-net = model_cpu.load_state_dict(torch.load(model_save_path))
-
+net.load_state_dict(torch.load(model_save_path))
+net.eval()  # 推論を実行する前に、ドロップアウト層とバッチ正規化層を評価モードに設定するために呼び出す必要がある
 
 
 
 #学習を再開するための checkpoint を作りたい場合は以下のようにします。
+checkPoint_dir = 'checkPoint'
+
 if epoch % 3 == 0:
     file_name = 'epoch_{}.pt'.format(epoch)
     path = os.path.join(checkPoint_dir, file_name)
