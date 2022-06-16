@@ -35,37 +35,7 @@ print(x[0])
 
 print(x[0][0])
 # >> tensor(1.6076e-35)
-'''
-さらにイメージをつかむために手計算したものと tensor で計算したものを突き合わせてみます。 計算するのは以下の行列。
 
-[1111][1001]=[1111]\left[ \begin{array}{rr} 1 & 1 \\ 1 & 1 \\ \end{array} \right] \left[ \begin{array}{rr} 1 & 0 \\ 0 & 1 \\ \end{array} \right] = \left[ \begin{array}{rr} 1 & 1 \\ 1 & 1 \\ \end{array} \right]
-[ 
-1
-1
-​
-  
-1
-1
-​
- ][ 
-1
-0
-​
-  
-0
-1
-​
- ]=[ 
-1
-1
-​
-  
-1
-1
-​
- ]
-これを tensor で計算するには以下のようにします。
-'''
 x1 = torch.tensor([[1,1],[1,1]])
 x2 = torch.tensor([[1,0],[0,1]])
 
@@ -416,41 +386,3 @@ if os.path.exists(tmp_path):
 
 #上述のコードも tensorboard での可視化を前提に書いてあるので参考にしてください。
 
-'''
-使い方は以下のように簡単です。
-
-Google Colabratory の任意のディレクトリに writer で結果を保存
-セルに%load_ext tensorboardと%tensorboard --logdir ./runs/<dir name>/を入力し、実行
-これをセルに入れて実行すれば OK です。
-
-# 2回目以降の実行時はloadではなく、以下のreloadを使う
-%load_ext tensorboard
-# %reload_ext tensorboard
-%tensorboard --logdir ./runs/<dir name>/
-コメントに書いたように%load_ext tensorboardを２回実行すると異なるポートで実行されて結果が見えなくなったので、２回目以降の実行は%reload_ext tensorboardを使うようにします。
-
-また、logdirは変数ではダメだったので上記のように文字列で直接パスを書きました。
-
-先ほどのコードの次のセルで tensorboard の可視化を行った結果が以下の画像になります。
-
-
-image
-以前 jupyter で紹介したときとは異なり、新規タブではなくセルの中に上記のような TensorBoard が現れます。
-
-めちゃめちゃ見やすくできてます！
-
-参考書籍
-PyTorch ニューラルネットワーク実装ハンドブック (Python ライブラリ定番セレクション)
-つくりながら学ぶ! PyTorch による発展ディープラーニング
-← 【学び】成功者の共通項！「GRIT やり抜く力」を読んだ感想
-【PyTorch】モデルの可視化・保存方法について学ぶ →
-mail
-twitter
-おい丸
-•
-© 2022
-•
-学びノート
-Tailwind Nextjs Theme
-【学び直し】Pytorchの基本とMLPでMNISTの分類・可視化の実装まで
-'''
