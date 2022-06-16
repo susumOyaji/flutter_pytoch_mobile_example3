@@ -50,6 +50,8 @@ Google Colabを使ってコードを書いていきます。ランタイムの�
 '''
 
 
+import tensorflow as tf
+from torchsummary import summary
 import datetime
 from dateutil.relativedelta import relativedelta
 from pandas_datareader import data as pdr
@@ -174,8 +176,8 @@ fig.show()
 '''
 
 
-model = torch.hub.load('rwightman/pytorch-image-models:master', 'resnet18', pretrained=True)
-print(model)
+#model = torch.hub.load('rwightman/pytorch-image-models:master', 'resnet18', pretrained=True)
+#print(model)
 
 
 
@@ -302,11 +304,16 @@ class LSTM(nn.Module):
         return prediction #predictioを予測値として返却します。
 
 
+
+
 #LSTMネットワークインスタンスを生成
 #LSTMクラスのインスタンスを生成して、GPUデバイスに送ります。
-
 model = LSTM()
 model.to(device)
+
+
+# torchsummaryを使った可視化
+summary(model, input_size=(1, 1 * 28 * 28))
 
 
 '''損失関数と最適化関数を定義'''
@@ -386,6 +393,9 @@ test_inputs = train_data_normalized[-seq_length:].tolist()
 
 
 model.load_state_dict(torch.load("assets/models/pytorch_v1.mdl"))
+model.summary()
+
+
 # モデルを評価モードとする
 model.eval()
 # 予測値を入れるリスト
@@ -397,7 +407,7 @@ for i in range(pred_days):
     with torch.no_grad():
         test_inputs.append(test_data_normalized.tolist()[i]) #test_inputsにtest_data_normalizedを追加
         test_outputs.append(model(seq).item())
-
+        #summary(model, (seq))  # summary(model,(channels,H,W))
 
 '''予測結果の整形'''
 #予測値test_outputsを正規化したデータから元のデータに戻して、actual_predictionsとします。
