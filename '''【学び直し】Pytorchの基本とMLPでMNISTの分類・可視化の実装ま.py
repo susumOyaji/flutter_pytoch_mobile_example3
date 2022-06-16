@@ -279,12 +279,12 @@ optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
 
 # log用フォルダを毎回生成
 # tensorboardの可視化用
-now = datetime.now()
-log_path = "./runs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
-print(log_path)
+#now = datetime.now()
+#log_path = "./runs/" + now.strftime("%Y%m%d-%H%M%S") + "/"
+#print(log_path)
 
 # tensorboard用のwriter
-writer = SummaryWriter(log_path)
+#writer = SummaryWriter(log_path)
 
 epochs = 3
 
@@ -342,10 +342,10 @@ for epoch in range(epochs):
                    .format(epoch+1, epochs, loss=avg_train_loss, val_loss=avg_val_loss, val_acc=avg_val_acc))
 
     # tensorboard用
-    writer.add_scalars('loss', {'train_loss':avg_train_loss, 'val_loss':avg_val_loss},epoch+1)
-    writer.add_scalars('accuracy', {'train_acc':avg_train_acc, 'val_acc':avg_val_acc}, epoch+1)
+    #writer.add_scalars('loss', {'train_loss':avg_train_loss, 'val_loss':avg_val_loss},epoch+1)
+    #writer.add_scalars('accuracy', {'train_acc':avg_train_acc, 'val_acc':avg_val_acc}, epoch+1)
 
-writer.close()
+#writer.close()
 
 
 # 追加部分
