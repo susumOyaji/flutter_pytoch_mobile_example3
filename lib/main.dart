@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:pytorch_mobile/pytorch_mobile.dart';
 import 'package:pytorch_mobile/model.dart';
 import 'package:pytorch_mobile/enums/dtype.dart';
+import 'package:http/http.dart' as http;
 
 void main() => runApp(const MyApp());
 
@@ -18,6 +19,45 @@ class MyApp extends StatefulWidget {
   @override
   _MyAppState createState() => _MyAppState();
 }
+
+
+Future<List<List<dynamic>>> processCsv() async {
+  var result = await DefaultAssetBundle.of(context).loadString(
+    "assets/data/test.csv",
+  );
+}
+
+Future load_csv() async (
+final response = await http
+        .get(Uri.parse('https://finance.yahoo.co.jp/quote/%5EDJI')); //^DJI
+
+    //print('Response body: ${response.body}');
+//https://finance.yahoo.com/quote/AAPL/history
+https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true
+);
+
+https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true
+
+Future getData() async {
+    final parameters = {
+      'api_key': 'xxxxxxxxxx',
+      'start_date': '2021-01-01',
+      'end_date': '2021-03-31',
+    };
+    //final url = Uri.https('www.quandl.com', '/api/v3/datasets/CHRIS/CME_NK2/data.json', parameters);
+    final url = Uri.https('https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true', parameters);
+    
+    
+    
+    final result = await http.get(url);
+    setState(() {
+      response = json.decode(result.body)['dataset_data']['data'];
+    });
+  }
+
+
+
+
 
 class _MyAppState extends State<MyApp> {
   Model? _imageModel, _customModel;
