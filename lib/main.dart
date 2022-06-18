@@ -45,8 +45,12 @@ Future getData() async {
       'end_date': '2021-03-31',
     };
     //final url = Uri.https('www.quandl.com', '/api/v3/datasets/CHRIS/CME_NK2/data.json', parameters);
-    final url = Uri.https('https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true', parameters);
+    //final url = Uri.https('https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true', parameters);
+    //final url = Uri.https('https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')
+    //https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true
     
+    
+    final response = await http.get(Uri.parse('https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
     
     
     final result = await http.get(url);
