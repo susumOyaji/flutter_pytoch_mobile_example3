@@ -3,6 +3,20 @@ import matplotlib.pyplot as plt
 import torch
 #import torch.nn as nn
 from random import uniform
+from datetime import datetime, timedelta
+
+'''日付シリアル値からyyyy/MM/dd HH:MM:ss 形式に変換
+    Args:
+        serialVal (float): シリアル値(Ex: 44434.3412172569)
+    Returns:
+        str: 時刻  yyyy/MM/dd HH:MM:ss 形式
+'''
+sDateTime = (datetime(1899, 12, 30) + timedelta(1600)
+             ).strftime('%Y/%m/%d %H:%M:%S')
+    
+print('Time',sDateTime)
+
+
 
 def make_data(num_div, cycles, offset=0):
     step = 2 * np.pi / num_div
