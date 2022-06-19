@@ -20,48 +20,29 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-
-Future<List<List<dynamic>>> processCsv() async {
-  var result = await DefaultAssetBundle.of(context).loadString(
-    "assets/data/test.csv",
-  );
-}
-
-Future load_csv() async (
-final response = await http
-        .get(Uri.parse('https://finance.yahoo.co.jp/quote/%5EDJI')); //^DJI
-
-    //print('Response body: ${response.body}');
-//https://finance.yahoo.com/quote/AAPL/history
-https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true
-);
-
-https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true
-
 Future getData() async {
-    final parameters = {
-      'api_key': 'xxxxxxxxxx',
-      'start_date': '2021-01-01',
-      'end_date': '2021-03-31',
-    };
-    //final url = Uri.https('www.quandl.com', '/api/v3/datasets/CHRIS/CME_NK2/data.json', parameters);
-    //final url = Uri.https('https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true', parameters);
-    //final url = Uri.https('https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')
-    //https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true
-    
-    
-    final response = await http.get(Uri.parse('https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
-    
-    
-    final result = await http.get(url);
-    setState(() {
-      response = json.decode(result.body)['dataset_data']['data'];
-    });
-  }
+  //final parameters = {
+  //  'api_key': 'xxxxxxxxxx',
+  //  'start_date': '2021-01-01',
+  //  'end_date': '2021-03-31',
+  //};
+  //final url = Uri.https('www.quandl.com', '/api/v3/datasets/CHRIS/CME_NK2/data.json', parameters);
+  //final url = Uri.https('https://finance.yahoo.com/quote/6758.T/history?period1=1639785600&period2=1655510400&interval=1d&filter=history&frequency=1d&includeAdjustedClose=true', parameters);
+  //final url = Uri.https('https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')
+  //https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true
 
+  final response = await http.get(Uri.parse(
+      'https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
 
+  String json = response.body;
+  print(json);
+  print(DateTime(1623974400));
 
-
+  //final result = await http.get(url);
+  //setState(() {
+  //  response = json.decode(result.body)['dataset_data']['data'];
+  //});
+}
 
 class _MyAppState extends State<MyApp> {
   Model? _imageModel, _customModel;
@@ -77,6 +58,7 @@ class _MyAppState extends State<MyApp> {
     loadModel().then((value) {
       setState(() {});
     });
+    getData();
   }
 
   @override
