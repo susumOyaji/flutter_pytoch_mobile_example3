@@ -64,6 +64,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
     external DateTime.fromMillisecondsSinceEpoch(millisecondsSinceEpoch,isUtc: false);
 
+    //unixtime
+int unixtime = DateTime.now().toUtc().millisecondsSinceEpoch;
+print("unixtime=$unixtime"); // unixtime=1557085819211
+DateTime dd = new DateTime.fromMillisecondsSinceEpoch(unixtime);
+print("date=$dd"); // date=2019-05-06 04:56:30.237
+print("date:${dd.toString().substring(0,16)}"); // date=2019-05-06 04:56
+
 
     print(sample); // 2021-12-31 19:30:00.000Z
     print(mini);
