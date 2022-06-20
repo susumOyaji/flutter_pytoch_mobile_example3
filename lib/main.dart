@@ -10,14 +10,42 @@ import 'package:pytorch_mobile/pytorch_mobile.dart';
 import 'package:pytorch_mobile/model.dart';
 import 'package:pytorch_mobile/enums/dtype.dart';
 import 'package:http/http.dart' as http;
+import "package:intl/intl.dart";
+import 'package:intl/date_symbol_data_local.dart';
+import 'epuchTime.dart';
 
-void main() => runApp(const MyApp());
+void main() => runApp(const MyAppTime());
 
 class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
   _MyAppState createState() => _MyAppState();
+}
+
+//unixtimeから見やすいフォーマットに変換する
+String convertTime(int t) {
+  //int型からDateTime型に変換
+  DateTime date = DateTime.fromMillisecondsSinceEpoch(t);
+  String time = DateFormat("yyyy年MM月dd日").format(date).toString();
+  print(time);
+  return time; //例 2020年08月14日
+}
+
+epochTime() {
+  DateTime now = DateTime.now();
+  var epochTime = (now.millisecondsSinceEpoch) * 1000;
+  print(epochTime);
+  return epochTime;
+}
+
+void myconvertTime(int t) {
+  var dateUtc = DateTime.fromMillisecondsSinceEpoch(t, isUtc: true);
+  var dateInMyTimezone = dateUtc.add(Duration(hours: 9));
+  var secondsOfDay = dateInMyTimezone.hour * 3600 +
+      dateInMyTimezone.minute * 60 +
+      dateInMyTimezone.second;
+  print(dateInMyTimezone);
 }
 
 Future getData() async {
@@ -32,11 +60,10 @@ Future getData() async {
   //https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true
 
   final response = await http.get(Uri.parse(
-      'https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1623974400&period2=1655510400&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
+      'https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1609460285&period2=1640996285&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
 
-  String json = response.body;
-  print(json);
-  print(DateTime(1623974400));
+  String data = response.body;
+  print(data);
 
   //final result = await http.get(url);
   //setState(() {
@@ -104,6 +131,9 @@ class _MyAppState extends State<MyApp> {
         .getPrediction([1, 2, 3, 4], [1, 2, 2], DType.float32);
 
     setState(() {});
+    //epochTime();
+    //myconvertTime(1609460285);
+    //convertTime(1609460285);
   }
 
   /*
