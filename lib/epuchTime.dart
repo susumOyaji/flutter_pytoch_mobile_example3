@@ -4,6 +4,7 @@ import 'dart:io';
 
 import "package:intl/intl.dart";
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:http/http.dart' as http;
 
 //void main() {
 //  runApp(const MyAppTime());
@@ -35,54 +36,49 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   int _counter = 0;
+  DateTime start = DateTime(2022, 1, 1);
+  DateTime end = DateTime.now();
+  String predicted_start = '';
+  String predicted_end = '';
 
-  Map map = {
-   "sample_date": 2020-11-08 08:33:27 Etc/GMT,
-   "sample_date_ms": 1604824407000,
-   "sample_date_microseconds": 1604824407000000,
-   "firebase_timestamp": 2020/10/11 5:22:03 PM UTC+9
-  };
-
-  int millisecondsSinceEpoch = 1640901600000;
-
-
-  void time() {
-    final sample =
-        DateTime.fromMicrosecondsSinceEpoch(1640901600000000, isUtc: true);
-
-    final mini =
-        DateTime.fromMillisecondsSinceEpoch(1640901600000, isUtc: true);
-
-    //MillisecondsからDateTimeへの変換
-    DateTime.fromMillisecondsSinceEpoch(map['sample_date_ms']);
-
-    //MicrosecondsからDateTimeへの変換
-    DateTime.fromMicrosecondsSinceEpoch(map['sample_date_microseconds']);
-
-    //Firebase TimestampからDateTimeへの変換
-    map['firebase_timestamp'].toDate();
-
-    external DateTime.fromMillisecondsSinceEpoch(millisecondsSinceEpoch,isUtc: false);
-
+  String _Time_to_unixcode(ref) {
     //unixtime
-int unixtime = DateTime.now().toUtc().millisecondsSinceEpoch;
-print("unixtime=$unixtime"); // unixtime=1557085819211
-DateTime dd = new DateTime.fromMillisecondsSinceEpoch(unixtime);
-print("date=$dd"); // date=2019-05-06 04:56:30.237
-print("date:${dd.toString().substring(0,16)}"); // date=2019-05-06 04:56
+    //int unixtime = DateTime.now().toUtc().millisecondsSinceEpoch;
+    int unixtime = ref.toUtc().millisecondsSinceEpoch;
+    unixtime = unixtime ~/ 1000;
 
+    print("unixtime=$unixtime"); // unixtime=1557085819211
 
-    print(sample); // 2021-12-31 19:30:00.000Z
-    print(mini);
+    DateTime dd = DateTime.fromMillisecondsSinceEpoch(unixtime);
+    //print("date=$dd"); // date=2019-05-06 04:56:30.237
+    print("date:${dd.toString().substring(0, 10)}"); // date=2019-05-06 04:56
+
+    String code = unixtime.toString();
+    return code;
   }
 
+  Future getData(String code) async {
+    //final response = await http.get(Uri.parse(
+    //  'https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1609460285&period2=1640996285&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
 
+    final response = await http.get(Uri.parse(
+        'https://query1.finance.yahoo.com/v7/finance/download/${code}.T?period1=${predicted_start}&period2=${predicted_end}&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
 
+    String data = response.body;
+    debugPrint(data);
+
+    //final result = await http.get(url);
+    //setState(() {
+    //  response = json.decode(result.body)['dataset_data']['data'];
+    //});
+  }
 
   void _incrementCounter() {
     setState(() {
       _counter++;
-      time();
+      predicted_start = _Time_to_unixcode(start);
+      predicted_end = _Time_to_unixcode(end);
+      getData('6976');
     });
   }
 

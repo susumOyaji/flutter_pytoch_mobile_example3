@@ -23,31 +23,6 @@ class MyApp extends StatefulWidget {
   _MyAppState createState() => _MyAppState();
 }
 
-//unixtimeから見やすいフォーマットに変換する
-String convertTime(int t) {
-  //int型からDateTime型に変換
-  DateTime date = DateTime.fromMillisecondsSinceEpoch(t);
-  String time = DateFormat("yyyy年MM月dd日").format(date).toString();
-  print(time);
-  return time; //例 2020年08月14日
-}
-
-epochTime() {
-  DateTime now = DateTime.now();
-  var epochTime = (now.millisecondsSinceEpoch) * 1000;
-  print(epochTime);
-  return epochTime;
-}
-
-void myconvertTime(int t) {
-  var dateUtc = DateTime.fromMillisecondsSinceEpoch(t, isUtc: true);
-  var dateInMyTimezone = dateUtc.add(Duration(hours: 9));
-  var secondsOfDay = dateInMyTimezone.hour * 3600 +
-      dateInMyTimezone.minute * 60 +
-      dateInMyTimezone.second;
-  print(dateInMyTimezone);
-}
-
 Future getData() async {
   //final parameters = {
   //  'api_key': 'xxxxxxxxxx',
@@ -63,7 +38,7 @@ Future getData() async {
       'https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1609460285&period2=1640996285&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
 
   String data = response.body;
-  print(data);
+  debugPrint(data);
 
   //final result = await http.get(url);
   //setState(() {
@@ -131,9 +106,6 @@ class _MyAppState extends State<MyApp> {
         .getPrediction([1, 2, 3, 4], [1, 2, 2], DType.float32);
 
     setState(() {});
-    //epochTime();
-    //myconvertTime(1609460285);
-    //convertTime(1609460285);
   }
 
   /*
