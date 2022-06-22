@@ -5,7 +5,9 @@ import 'dart:io';
 import "package:intl/intl.dart";
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:http/http.dart' as http;
-
+import 'dart:convert';
+import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart';
 //void main() {
 //  runApp(const MyAppTime());
 //}
@@ -40,21 +42,31 @@ class _MyHomePageState extends State<MyHomePage> {
   DateTime end = DateTime.now();
   String predicted_start = '';
   String predicted_end = '';
+  String code = '6758';
 
-  String _Time_to_unixcode(ref) {
+  @override
+  void initState() {
+    super.initState();
+    predicted_start = _Time_to_unixcode(start);
+    predicted_end = _Time_to_unixcode(end);
+    getData(code);
+  }
+
+  String _Time_to_unixcode(DateTime ref) {
     //unixtime
     //int unixtime = DateTime.now().toUtc().millisecondsSinceEpoch;
     int unixtime = ref.toUtc().millisecondsSinceEpoch;
     unixtime = unixtime ~/ 1000;
 
-    print("unixtime=$unixtime"); // unixtime=1557085819211
+    debugPrint("unixtime=$unixtime"); // unixtime=1557085819211
 
     DateTime dd = DateTime.fromMillisecondsSinceEpoch(unixtime);
     //print("date=$dd"); // date=2019-05-06 04:56:30.237
-    print("date:${dd.toString().substring(0, 10)}"); // date=2019-05-06 04:56
+    debugPrint(
+        "date:${dd.toString().substring(0, 10)}"); // date=2019-05-06 04:56
 
-    String code = unixtime.toString();
-    return code;
+    String unixcode = unixtime.toString();
+    return unixcode;
   }
 
   Future getData(String code) async {
@@ -67,17 +79,24 @@ class _MyHomePageState extends State<MyHomePage> {
     String data = response.body;
     debugPrint(data);
 
+    List<List<dynamic>> rowsAsListOfValues =
+        const CsvToListConverter().convert(data);
+    debugPrint(rowsAsListOfValues.toString());
+
+    String csv = const ListToCsvConverter().convert(rowsAsListOfValues);
+
     //final result = await http.get(url);
-    //setState(() {
-    //  response = json.decode(result.body)['dataset_data']['data'];
-    //});
+    String response_j;
+    setState(() {
+      Map<String, dynamic> jsonData = json.decode(response
+          .body); //['Date','Open','High,'Low','Close','Adj Close',Volume'];
+    });
   }
 
   void _incrementCounter() {
     setState(() {
       _counter++;
-      predicted_start = _Time_to_unixcode(start);
-      predicted_end = _Time_to_unixcode(end);
+
       getData('6976');
     });
   }

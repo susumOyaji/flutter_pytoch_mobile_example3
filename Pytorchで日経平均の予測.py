@@ -151,7 +151,7 @@ test_idx_from = 4000
 #学習用データ
 X_train = torch.tensor(X_data[:val_idx_from], dtype=torch.float, device=device)
 y_train = torch.tensor(y_data[:val_idx_from], dtype=torch.float, device=device)
-#print(X_data,y_train)
+print(X_data,y_train)
 #評価用データ
 X_val   = torch.tensor(X_data[val_idx_from:], dtype=torch.float, device=device)
 y_val   = y_data[val_idx_from:]
