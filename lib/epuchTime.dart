@@ -44,14 +44,6 @@ class _MyHomePageState extends State<MyHomePage> {
   String predicted_end = '';
   String code = '6758';
 
-  @override
-  void initState() {
-    super.initState();
-    predicted_start = _Time_to_unixcode(start);
-    predicted_end = _Time_to_unixcode(end);
-    getData(code);
-  }
-
   String _Time_to_unixcode(DateTime ref) {
     //unixtime
     //int unixtime = DateTime.now().toUtc().millisecondsSinceEpoch;
@@ -61,7 +53,7 @@ class _MyHomePageState extends State<MyHomePage> {
     debugPrint("unixtime=$unixtime"); // unixtime=1557085819211
 
     DateTime dd = DateTime.fromMillisecondsSinceEpoch(unixtime);
-    //print("date=$dd"); // date=2019-05-06 04:56:30.237
+    debugPrint("date=$dd"); // date=2019-05-06 04:56:30.237
     debugPrint(
         "date:${dd.toString().substring(0, 10)}"); // date=2019-05-06 04:56
 
@@ -70,6 +62,9 @@ class _MyHomePageState extends State<MyHomePage> {
   }
 
   Future getData(String code) async {
+    predicted_start = _Time_to_unixcode(start);
+    predicted_end = _Time_to_unixcode(end);
+
     //final response = await http.get(Uri.parse(
     //  'https://query1.finance.yahoo.com/v7/finance/download/6758.T?period1=1609460285&period2=1640996285&interval=1d&events=history&includeAdjustedClose=true')); //^DJI
 
@@ -137,6 +132,13 @@ test_inputs = train_data_normalized[-seq_length:].tolist()
 
       getData('6976');
     });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+
+    getData(code);
   }
 
   @override
