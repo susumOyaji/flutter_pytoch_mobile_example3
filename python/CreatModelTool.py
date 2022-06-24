@@ -14,6 +14,9 @@ import datetime
 from dateutil.relativedelta import relativedelta
 from pandas_datareader import data as pdr
 from sklearn.metrics import r2_score, mean_squared_error
+import torch
+import torch.nn as nn
+import torch.optim as optim
 # pandasのインポート
 
 # データの読み込み
@@ -30,6 +33,9 @@ start_train=datetime.date.today() + relativedelta(days=-700)
 #dowstart_train = datetime.date(2022, 1, 5)#start_train + relativedelta(days=+3)
 # 昨日分(today-1日)まで取得できる（当日分は変動しているため）
 end_train = datetime.date.today() + relativedelta(days=-1)
+
+
+
 
 data = pdr.get_data_yahoo(f'{code}.T', start_train, end_train)  # 教師データを読み込む。
 Dow_df = pdr.get_data_yahoo('^DJI', start_train, end_train)  # 試験データのcsvファイルを読み込む。
@@ -85,7 +91,7 @@ png
 
 
 # 曜日情報を追加(月曜:0, 火曜:1, 水曜:2, 木曜:3, 金曜:4、土曜:5、日曜:6)
-data['weekday'] = data['Date'].dt.weekday
+#data['weekday'] = data['Date'].dt.weekday
 #data['Dowweekday'] = Dow_df['Date'].dt.weekday
 #data['DowDate'] = Dow_df['Date']
 #data['Nikkeiweekday'] = Nikkei_df['Date'].dt.weekday
@@ -125,18 +131,18 @@ png
 
 
 # Closeの列のデータのみを取り出し
-data['NikkiClose'] = Nikkei_df['Close'].values
+data['NClose'] = Nikkei_df['Close'].values
 
 
 
 
 
 # カラムの並べ替え
-df = data[['Date', 'weekday','High', 'Low', 'Open', 'Close', 'NikkiClose']]
+df = data[['Date','High', 'Low', 'Open', 'Close', 'NClose']]
 #df_dow = Dow_df[['Date', 'weeks', 'weekday', 'High', 'Low', 'Open', 'Close']]
 #df_nikkei = Nikkei_df[['Date', 'weeks', 'weekday', 'High', 'Low', 'Open', 'Close']]
 print(df)
-df.to_csv('data/stocks_price_data/KinoCode_data.csv')  # csv書き出し
+df.to_csv('./data/stocks_price_data/KinoCode_data.csv')  # csv書き出し
 '''
 png
 今回のような時系列データを処理する際には、set_indexメソッドを使ってindexを日付に設定します。念のためにsort_valuesメソッドを使って日付順に並び替えを行います。実行する事で、日付の'Date'がindexに設定されている事がわかります。
@@ -167,7 +173,7 @@ df_shift
 
 #翌日の始値と本日の終値の差分を追加する
 df['delta_Close'] = df_shift['Close'] - df['Close']
-df
+print(df)
 
 '''
 png
@@ -178,7 +184,7 @@ png
 df['Up'] = 0
 df['Up'][df['delta_Close'] > 0] = 1
 df = df.drop('delta_Close', axis=1)
-df
+print(df)
 
 '''
 png
@@ -271,7 +277,7 @@ df
 #不要カラムの削除と並び替えを行います。
 
 # 不要カラムの削除と並べ替え
-df = df[['weekday', 'High', 'Low', 'Open', 'Close', 'Close_ratio', 'Body', 'Up']]
+df = df[[ 'High', 'Low', 'Open', 'Close', 'Close_ratio', 'Body', 'Up']]
 df
 
 '''
@@ -307,7 +313,7 @@ png
 
 
 # 学習データを説明変数(X_train)と目的変数(y_train)に分ける
-X_train = df_train[['weekday', 'High', 'Low',
+X_train = df_train[['High', 'Low',
                     'Open', 'Close', 'Close_ratio', 'Body']]
 y_train = df_train['Up']
 
@@ -321,7 +327,7 @@ print(y_train)
 #同様に検証データの説明変数をX_val、目的変数をy_valとしてデータを入力し、確認します。
 
 # 検証データを説明変数(X_val)と目的変数(y_val)に分ける
-X_val = df_val[['weekday', 'High', 'Low',
+X_val = df_val[['High', 'Low',
                 'Open', 'Close', 'Close_ratio', 'Body']]
 y_val = df_val['Up']
 
@@ -462,6 +468,100 @@ def lstm_comp(df):
     return model
 
 '''
+
+??????
+
+'''
+class LSTM(nn.Module):
+    def __init__(self, input_size=6, hidden_layer_size=100, output_size=1):
+        super().__init__()
+        self.hidden_layer_size = hidden_layer_size
+
+        #batch_firstはTrueなので、LSTMへの入力データxのshapeを(batch_size, seq_length, input_size)です。
+        self.lstm = nn.LSTM(input_size=input_size, hidden_size=hidden_layer_size, batch_first=True)
+
+        self.linear = nn.Linear(in_features=hidden_layer_size, out_features=output_size)
+
+    def forward(self, x):
+        # LSTMのinputは(batch_size, seq_len, input_size)にする
+        # LSTMのoutputは(batch_size, seq_len, hidden_layer_size)となる
+        # hidden stateとcell stateにはNoneを渡して0ベクトルを渡す
+        lstm_out, (hn, cn) = self.lstm(x, None)
+        # Linearのinputは(N,∗,in_features)にする
+        # lstm_out(batch_size, seq_len, hidden_layer_size)のseq_len方向の最後の値をLinearに入力する
+        prediction = self.linear(lstm_out[:, -1, :])
+        return prediction #predictioを予測値として返却します。
+
+
+
+#device = 'cuda' if torch.cuda.is_available else 'cpu'
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+#LSTMネットワークインスタンスを生成
+#LSTMクラスのインスタンスを生成して、GPUデバイスに送ります。
+model = LSTM()
+model.to(device)
+
+'''損失関数と最適化関数を定義'''
+#損失関数は、平均二乗誤差、最適化関数はAdamとします。Adamの学習率(lr)はデフォルト0.001です。
+# 損失関数と最適化関数を定義
+#入力の各要素間の平均二乗誤差(L2ノルムの二乗)を測定する基準を作成します
+criterion = nn.MSELoss()
+
+#バイナリクロスエントロピー損失を計算します。
+# これは、0または1（したがってバイナリ）のいずれかである1つ以上のターゲットがある場合に適用されます。
+binary_criterion= nn.BCELoss()
+
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+
+'''学習'''
+#train_seq_dataは学習データのシーケンスデータを取得で取得したデータでシーケンスデータとラベルデータのタプルのリストです。
+#1epochでシーケンスデータ全てのデータを学習するバッチ学習になります。
+#学習ごとに勾配初期化、予測、誤差計算、逆伝搬、勾配計算を行って、1epochごとに誤差をlossesに入れてあとで表示します。
+#seqとlabelsはshapeが(seq_length, 特徴量)なのでLSTMに渡すためにunsqueezeして(batch_size, seq_length, 特徴量)にします。
+# 本記事ではbatch_sizeは1です。
+
+epochs = 5
+losses = []
+for i in range(epochs):
+    for seq, labels in train_seq_data:
+        # seq, labelsのshapeは(seq_length, 特徴量)なのでLSTMに渡すために(batch, seq_length, 特徴量)にする。(batch=1)
+        seq, labels = torch.unsqueeze(seq, 0), torch.unsqueeze(labels, 0)
+        seq, labels = seq.to(device), labels.to(device)
+        optimizer.zero_grad()
+        y_pred = model(seq)
+        single_loss = criterion(y_pred, labels)
+        single_loss.backward()
+        optimizer.step()
+    losses.append(single_loss.item())
+    print(f'epoch: {i}, loss : {single_loss.item()}')
+
+
+'''学習時の損失をグラフ表示'''
+#学習データの損失をグラフ表示します。順調に下がっています。
+
+#plt.plot(losses)
+
+
+
+torch.save(model.state_dict(),"assets/models/pytorch_v1.mdl")
+print('best score updated, Pytorch model was saved!!', )
+
+
+
+'''
+
+
+???????????
+
+
+
+'''
+
+
+
+'''
 次に、作成したモデルが本当に予測に使用できるのかを確認する方法として、交差検証をしましょう。正解の分かっている学習データを複数に分割して、交差検証を行うのが有効です。
 交差検証の手法には複数存在しますが、今回の様な時系列のデータで過去のデータを用いて未来を予測する場合は、時系列分割の交差検証を用いるのが一般的です。
 今回は学習データを5分割し、学習データと検証データが図の様なイメージの組み合わせで合計4回の学習、予測と精度検証を繰り返します。これらのスコアの平均値から、モデルが予測に使用できるかの判断を行います。
@@ -494,17 +594,12 @@ for fold, (train_indices, valid_indices) in enumerate(tscv.split(X_train_np_arra
     X_train, X_valid = X_train_np_array[train_indices], X_train_np_array[valid_indices]
     y_train, y_valid = y_train_new[train_indices], y_train_new[valid_indices]
 
+
     # LSTM構築とコンパイル関数にX_trainを渡し、変数modelに代入
     model = lstm_comp(X_train)
 
     '''# モデル学習'''
     hist = model.fit(X_train, y_train, epochs=10, batch_size=64)
-
-    # loss(訓練データに対する判定結果)、val_loss(テストデータに対する判定結果)をプロットする
-    #loss = hist.history['loss']
-    #val_loss = hist.history['val_loss']
-    #epochs = len(loss)
-    ''''''
 
 
     # 予測
